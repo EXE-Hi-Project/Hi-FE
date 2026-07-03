@@ -4,7 +4,7 @@ import type { HealthVideo } from '../../types/shared';
 import api from '../../lib/api';
 import ResponsiveModal from '../ui/ResponsiveModal';
 
-const VIDEOS_PER_PAGE = 6;
+const VIDEOS_PER_PAGE = 3;
 
 export default function HealthVideoSection() {
   const [selectedVideo, setSelectedVideo] = useState<HealthVideo | null>(null);
@@ -90,7 +90,7 @@ export default function HealthVideoSection() {
                   className="group overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-rose-200 hover:shadow-md active:scale-[0.99]"
                 >
                   <div className="relative aspect-video overflow-hidden bg-slate-100">
-                    <img src={video.thumbnailUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                    <img src={video.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
                     <span className="material-symbols-outlined absolute left-3 top-3 flex size-10 items-center justify-center rounded-full bg-white/90 text-rose-500 shadow-sm">play_arrow</span>
                   </div>
                   <div className="p-4">

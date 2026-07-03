@@ -6,6 +6,7 @@ import {
   PREMIUM_PLAN_FEATURES,
   PREMIUM_YEARLY_FEATURES,
 } from '../config/subscriptionPlans';
+import { FALLBACK_PRICING, formatPlanPrice, usePlanPricing } from '../hooks/usePlanPricing';
 
 const REVIEWER_AVATARS = {
   minhAnh: { initials: 'MA', className: 'from-pink-100 to-sky-100 text-pink-700' },
@@ -19,6 +20,8 @@ const HERO_AVATARS = [
   { initials: 'V', className: 'from-violet-200 to-pink-100 text-violet-700' },
 ];
 
+const HERO_IMAGE_PRIORITY = { fetchpriority: 'high' } as Record<string, string>;
+
 const LANDING_PLANS = [
   {
     name: 'Đồng Hành Cơ Bản',
@@ -30,29 +33,32 @@ const LANDING_PLANS = [
     highlight: false,
   },
   {
-    name: 'Đồng Hành Premium Tháng',
+    name: 'Hi Pro',
+    planId: 'monthly' as const,
     price: '49.000đ',
     suffix: '/tháng',
     description: 'Mở khóa phân tích nâng cao và AI chăm sóc sâu hơn.',
-    features: [...PREMIUM_YEARLY_FEATURES],
+    features: [...PREMIUM_PLAN_FEATURES],
     to: '/register?plan=monthly',
-    cta: 'Chọn Đồng Hành Tháng',
+    cta: 'Chọn Hi Pro',
     highlight: true,
   },
   {
-    name: 'Đồng Hành Premium Năm',
+    name: 'Hi Max',
+    planId: 'yearly' as const,
     price: '399.000đ',
     suffix: '/năm',
     badge: 'Tiết kiệm 32%',
     description: 'Tối ưu cho người dùng muốn theo dõi dài hạn.',
-    features: [...PREMIUM_PLAN_FEATURES],
+    features: [...PREMIUM_YEARLY_FEATURES],
     to: '/register?plan=yearly',
-    cta: 'Chọn Đồng Hành Năm',
+    cta: 'Chọn Hi Max',
     highlight: false,
   },
 ];
 
 export default function LandingPage() {
+  const { data: pricing = FALLBACK_PRICING } = usePlanPricing();
   return (
     <div className="lp-root">
       {/* Background Blobs */}
@@ -141,7 +147,7 @@ export default function LandingPage() {
                       height={900}
                       alt="Minh hoa ung dung HiLover"
                       loading="eager"
-                      fetchPriority="high"
+                      {...HERO_IMAGE_PRIORITY}
                       decoding="async"
                       className="h-full w-full rounded-[2rem] object-cover object-center"
                     />
@@ -351,7 +357,7 @@ export default function LandingPage() {
                 Chọn nhịp chăm sóc phù hợp với bạn
               </h2>
               <p className="text-base font-medium leading-relaxed text-slate-500 md:text-lg">
-                Free mở toàn bộ công cụ chăm sóc sức khỏe, cá nhân hóa AI và nhắc nhở. Premium tập trung vào hạn mức AI cao hơn, phân tích chuyên sâu và trải nghiệm cặp đôi nâng cao.
+                Free mở toàn bộ công cụ chăm sóc sức khỏe hằng ngày. Hi Pro và Hi Max mở hạn mức AI cao hơn, phân tích chuyên sâu và trải nghiệm cặp đôi nâng cao.
               </p>
             </div>
 
@@ -367,18 +373,27 @@ export default function LandingPage() {
                         : 'border-slate-100 bg-white/90'
                     }`}
                   >
-                    {plan.badge && (
+                    {(plan.planId === 'yearly' ? (pricing.hiMax.discountPercent > 0 ? `Giảm ${pricing.hiMax.discountPercent}%` : plan.badge) : plan.badge) && (
                       <span className="absolute right-5 top-5 rounded-full bg-gradient-to-r from-pink-500 to-violet-500 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-lg">
-                        {plan.badge}
+                        {plan.planId === 'yearly' && pricing.hiMax.discountPercent > 0 ? `Giảm ${pricing.hiMax.discountPercent}%` : plan.badge}
                       </span>
                     )}
                     <div className="mb-6">
-                      <h3 className="text-xl font-black text-slate-900">{plan.name}</h3>
+                      <h3 className="bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-2xl font-black text-transparent">{plan.name}</h3>
                       <p className="mt-2 min-h-[48px] text-sm font-medium leading-relaxed text-slate-500">{plan.description}</p>
                     </div>
 
                     <div className="mb-6 flex items-end gap-1">
-                      <span className="text-4xl font-black tracking-tight text-slate-900">{plan.price}</span>
+                      {plan.planId && pricing.activeSale ? (
+                        <span className="mr-2 pb-1 text-sm font-bold text-slate-400 line-through">
+                          {formatPlanPrice(plan.planId === 'monthly' ? pricing.hiPro.basePrice : pricing.hiMax.basePrice)}
+                        </span>
+                      ) : null}
+                      <span className="bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-4xl font-black tracking-tight text-transparent">
+                        {plan.planId
+                          ? formatPlanPrice(plan.planId === 'monthly' ? pricing.hiPro.currentPrice : pricing.hiMax.currentPrice)
+                          : plan.price}
+                      </span>
                       {plan.suffix && <span className="pb-1 text-sm font-bold text-slate-600">{plan.suffix}</span>}
                     </div>
 

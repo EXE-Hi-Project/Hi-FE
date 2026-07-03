@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
@@ -18,6 +18,9 @@ import PricingCard from '../components/PricingCard';
 import type { CycleInsights, CycleRecord, CoupleAnniversarySummary } from '../types/shared';
 import { normalizeAnniversarySummary } from '../utils/coupleAnniversaryCalendar';
 import WeatherForecast from '../components/ui/WeatherForecast';
+
+const SaleBanner = lazy(() => import('../components/subscription/SaleBanner'));
+const CycleChartPanel = lazy(() => import('../components/cycles/CycleChartPanel'));
 
 /* ─── types & helpers ───────────────────────────────── */
 interface PartnerCyclesResponse {
@@ -252,8 +255,10 @@ export default function FemaleDashboardPage() {
                 </span>
               </h1>
             </div>
-            <WeatherForecast />
+            <WeatherForecast compact />
           </div>
+
+          <Suspense fallback={null}><SaleBanner /></Suspense>
 
           {/* ── Card grid ── */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -396,11 +401,11 @@ export default function FemaleDashboardPage() {
                     <h4 className="font-bold text-lg text-slate-900">{partnerName}</h4>
                     <p className="text-xs text-slate-400">Đã kết nối</p>
                     {anniversaries?.daysTogether !== undefined && anniversaries?.daysTogether !== null && (
-                      <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-pink-50 text-pink-600 border border-pink-100 text-xs font-black">
+                      <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white text-pink-600 border border-pink-100 text-xs font-black">
                         <span className="material-symbols-outlined text-sm">favorite</span>
                         {anniversaries.startDate?.title || 'Đồng hành'}{' '}
                         <span
-                          className="text-sm font-black px-0.5"
+                          className="px-0.5 text-2xl font-black leading-none"
                           style={{
                             background: 'linear-gradient(135deg, #7ecae8 0%, #c9a8e0 48%, #f9a8c9 100%)',
                             WebkitBackgroundClip: 'text',
@@ -479,7 +484,21 @@ export default function FemaleDashboardPage() {
               </div>
               {insights?.advancedAnalyticsAvailable ? (
                 <>
-              <div className="mt-5 grid gap-3 md:grid-cols-4">
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
+                <div className="h-64 rounded-3xl border border-pink-50 bg-gradient-to-br from-white to-pink-50/40 p-4">
+                  <p className="mb-3 text-[10px] font-black uppercase tracking-wider text-pink-400">Xu hướng chu kỳ</p>
+                  <Suspense fallback={<div className="h-full animate-pulse rounded-2xl bg-pink-50" />}>
+                    <CycleChartPanel kind="trend" insights={insights} avgLen={cycleLen} avgPeriod={periodLen} />
+                  </Suspense>
+                </div>
+                <div className="h-64 rounded-3xl border border-sky-50 bg-gradient-to-br from-white to-sky-50/50 p-4">
+                  <p className="mb-3 text-[10px] font-black uppercase tracking-wider text-sky-500">Lịch sử gần đây</p>
+                  <Suspense fallback={<div className="h-full animate-pulse rounded-2xl bg-sky-50" />}>
+                    <CycleChartPanel kind="length-bars" cycles={cycleQuery.data?.cycles ?? []} />
+                  </Suspense>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-4">
                 <div className="rounded-3xl bg-gradient-to-br from-pink-50 to-white p-4">
                   <p className="text-[10px] font-black uppercase tracking-wider text-pink-400">Tính đều đặn</p>
                   <p className="mt-2 text-3xl font-black text-slate-900">{insights?.regularityScore ?? 0}%</p>
@@ -516,7 +535,7 @@ export default function FemaleDashboardPage() {
                   <PremiumLockCard
                     compact
                     title="Mở phân tích chu kỳ chuyên sâu"
-                    description="Premium bổ sung điểm ổn định, độ tin cậy, xu hướng dài hạn và phân tích triệu chứng. Dự đoán kỳ kinh, rụng trứng và cảnh báo an toàn vẫn luôn miễn phí."
+                    description="Hi Pro và Hi Max bổ sung điểm ổn định, độ tin cậy, xu hướng dài hạn và phân tích triệu chứng."
                   />
                   <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
                     <p className="text-[10px] font-black uppercase tracking-wider text-violet-500">Rụng trứng ước tính</p>

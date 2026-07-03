@@ -39,9 +39,9 @@ export default function SettingsPage() {
   const { data: transactions } = usePaymentHistory();
   const isPremium = subscription?.tier === 'PREMIUM';
   const planLabel = subscription?.plan === 'PREMIUM_YEARLY'
-    ? 'Đồng Hành Premium Năm'
+    ? 'Hi Max'
     : subscription?.plan === 'PREMIUM_MONTHLY'
-      ? 'Đồng Hành Premium Tháng'
+      ? 'Hi Pro'
       : 'Đồng Hành Cơ Bản';
   const isMale = user?.gender === 'male';
   const accent = useMemo(() => (
@@ -146,7 +146,7 @@ export default function SettingsPage() {
               </span>
             </div>
 
-            {/* Premium details block */}
+            {/* Subscription details block */}
             <div className="mt-6 w-full border-t border-slate-200/50 pt-5">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5">Gói đồng hành</p>
               {isPremium ? (
@@ -156,7 +156,7 @@ export default function SettingsPage() {
                       <span className="material-symbols-outlined text-[20px] animate-pulse">workspace_premium</span>
                     </div>
                     <div>
-                      <p className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">Hi Premium</p>
+                      <p className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">Gói Hi đang hoạt động</p>
                       <p className="text-[11px] font-bold text-pink-600 mt-0.5">{planLabel}</p>
                     </div>
                   </div>
@@ -186,7 +186,7 @@ export default function SettingsPage() {
                     }}
                     className="hi-btn-primary mt-3.5 block text-center rounded-xl py-2 px-4 text-xs font-bold"
                   >
-                    Nâng cấp Premium
+                    Nâng cấp Hi Pro
                   </a>
                 </div>
               )}
@@ -280,7 +280,7 @@ export default function SettingsPage() {
                   <tbody className="divide-y divide-slate-100 text-xs">
                     {transactions.map((tx) => {
                       const normalizedPlan = tx.plan?.toLowerCase();
-                      const planText = normalizedPlan?.includes('yearly') ? 'Premium Năm' : normalizedPlan?.includes('monthly') ? 'Premium Tháng' : 'Nâng cấp';
+                      const planText = normalizedPlan?.includes('yearly') ? 'Hi Max' : normalizedPlan?.includes('monthly') ? 'Hi Pro' : 'Nâng cấp';
                       const amountText = (tx.amount || 0).toLocaleString('vi-VN') + 'đ';
                       const dateText = tx.createdAt ? new Date(tx.createdAt).toLocaleString('vi-VN') : '—';
                       
@@ -352,7 +352,7 @@ export default function SettingsPage() {
                   Chính sách Hủy gói
                 </h4>
                 <p className="text-[11px] leading-relaxed text-slate-500">
-                  Gói Premium hiện được thanh toán một lần cho thời hạn 30 hoặc 365 ngày và không tự động gia hạn. Bạn có thể dừng gói qua nút <strong>"Dừng gói Premium"</strong>; quyền lợi đã thanh toán vẫn được giữ đến ngày hết hạn.
+                  Hi Pro và Hi Max được thanh toán cho thời hạn 30 hoặc 365 ngày. Bạn có thể dừng gói; quyền lợi đã thanh toán vẫn được giữ đến ngày hết hạn.
                 </p>
               </div>
               <div className="bg-slate-50/60 rounded-2xl border border-slate-100/70 p-4">
@@ -361,7 +361,7 @@ export default function SettingsPage() {
                   Chính sách Hoàn tiền
                 </h4>
                 <p className="text-[11px] leading-relaxed text-slate-500">
-                  Vì gói Premium mở khóa nội dung số ngay lập tức (AI tư vấn y khoa và các tính năng chu kỳ nâng cao), chúng tôi không hỗ trợ hoàn tiền sau khi giao dịch thành công. Ngoại lệ duy nhất là lỗi hệ thống khiến bạn đã bị trừ tiền mà tài khoản không được nâng cấp Premium sau 24h. Vui lòng liên hệ <a href="mailto:support@hilover.space" className="text-pink-500 font-semibold hover:underline">support@hilover.space</a> kèm mã giao dịch để hỗ trợ nhanh nhất.
+                  Vì Hi Pro và Hi Max mở khóa nội dung số ngay lập tức, chúng tôi không hỗ trợ hoàn tiền sau khi giao dịch thành công. Nếu đã bị trừ tiền nhưng tài khoản chưa được nâng cấp sau 24 giờ, vui lòng liên hệ <a href="mailto:support@hilover.space" className="text-pink-500 font-semibold hover:underline">support@hilover.space</a> kèm mã giao dịch.
                 </p>
               </div>
             </div>

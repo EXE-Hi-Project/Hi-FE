@@ -12,7 +12,7 @@ export default function PaymentSuccessPage() {
           Thanh toán thành công!
         </h1>
         <p className="mt-3 text-base text-gray-500 font-sans">
-          Chào mừng bạn đến với gói <span className="font-semibold text-pink-500">Đồng Hành Premium</span> cùng Hi. Tài khoản của bạn đã được nâng cấp thành công.
+          Chào mừng bạn đến với <span className="font-semibold text-pink-500">Hi Pro / Hi Max</span>. Tài khoản của bạn đã được nâng cấp thành công.
         </p>
 
         <div className="mt-8 space-y-3">

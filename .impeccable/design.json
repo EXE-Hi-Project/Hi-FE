@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-01T14:30:00+07:00",
+  "title": "Design System: Hi App",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Care Pink",
+        "canonical": "#eb477e",
+        "tonalRamp": ["#3b0719", "#7a1235", "#b8275a", "#eb477e", "#f472a1", "#f9a8c9", "#fce7f3", "#fff7fb"]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Mauve Companion",
+        "canonical": "#88636f",
+        "tonalRamp": ["#26141a", "#4a2933", "#6d4653", "#88636f", "#aa8490", "#ceb0b9", "#eadce1", "#fbf7f9"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink Slate",
+        "canonical": "#0f172a",
+        "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#f8fafc"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Major page titles and dashboard hero numbers only."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Readable Vietnamese copy in private health contexts."
+      }
+    },
+    "shadows": [
+      {
+        "name": "soft-panel",
+        "value": "0 1px 2px rgba(15, 23, 42, 0.06)",
+        "purpose": "Low separation between panels and tinted backgrounds."
+      },
+      {
+        "name": "lifted-cta",
+        "value": "0 10px 30px -8px rgba(200, 150, 220, 0.52)",
+        "purpose": "Primary CTA emphasis."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "150ms-250ms ease-out",
+        "purpose": "Button, tab, hover, and panel state changes."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main action button for product flows.",
+      "html": "<button class=\"ds-btn-primary\">Tiếp tục</button>",
+      "css": ".ds-btn-primary { background: #eb477e; color: #ffffff; border: 0; border-radius: 16px; padding: 12px 20px; font: 800 14px/1.2 system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; transition: transform 180ms ease-out, background 180ms ease-out, box-shadow 180ms ease-out; box-shadow: 0 10px 30px -8px rgba(235, 71, 126, 0.35); } .ds-btn-primary:hover { background: #db2777; transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 3px solid rgba(244, 114, 182, 0.35); outline-offset: 2px; }"
+    },
+    {
+      "name": "Product Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Default white product card with restrained lift.",
+      "html": "<article class=\"ds-card\"><h3>Tiêu đề</h3><p>Nội dung hỗ trợ ngắn gọn.</p></article>",
+      "css": ".ds-card { background: #ffffff; color: #0f172a; border: 1px solid #fce7f3; border-radius: 16px; padding: 20px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06); } .ds-card h3 { margin: 0 0 8px; font: 800 18px/1.25 system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; } .ds-card p { margin: 0; color: #475569; font: 600 14px/1.6 system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Readable form input for auth, settings, and modal workflows.",
+      "html": "<label class=\"ds-field\"><span>Email</span><input placeholder=\"name@example.com\" /></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: #0f172a; font: 800 13px/1.2 system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; } .ds-field input { min-height: 44px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 16px; color: #1f2937; font: 600 14px/1.4 system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; } .ds-field input:focus { outline: 3px solid rgba(244, 114, 182, 0.28); border-color: #f472b6; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Gentle Health Companion",
+    "overview": "Hi uses a product-first visual system: familiar controls, soft surfaces, and careful hierarchy. The interface should feel like a trusted care companion in Vietnamese, not a decorative wellness poster.",
+    "keyCharacteristics": [
+      "Warm product UI with pink as an action and selection accent.",
+      "Familiar app patterns for dashboards, settings, calendars, forms, and admin panels.",
+      "White or lightly tinted surfaces with clear borders and restrained shadows.",
+      "Strong labels and readable body copy for private health contexts."
+    ],
+    "rules": [
+      {
+        "name": "The Pink Has a Job Rule",
+        "body": "Pink marks action, selection, or meaningful relationship/health state. It is not filler decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Gray On Tint Rule",
+        "body": "Gray text on pink, rose, violet, sky, emerald, or red tints is prohibited unless contrast is verified.",
+        "section": "colors"
+      },
+      {
+        "name": "The Solid Text Rule",
+        "body": "Gradient text is prohibited for product headings, metrics, prices, and labels.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do use Care Pink for primary actions, selected states, and meaningful health/relationship markers.",
+      "Do keep product UI familiar and stable across dashboards, forms, modals, calendars, and admin pages.",
+      "Do verify WCAG AA contrast for labels, metadata, placeholders, and tinted panels."
+    ],
+    "donts": [
+      "Don't use generic AI SaaS dashboards, neon purple/cyan gradients as a default identity, excessive glassmorphism, decorative gradient text, washed-out gray text on tinted backgrounds, over-rounded nested cards, bouncy motion, or greeting-card UI for serious health tasks.",
+      "Don't use gray text on colored backgrounds without checking contrast.",
+      "Don't use gradient text for headings, prices, metrics, or labels."
+    ]
+  }
+}

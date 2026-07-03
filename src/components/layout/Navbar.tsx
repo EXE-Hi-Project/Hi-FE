@@ -76,7 +76,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
         { to: notificationSettingsPath, icon: 'notifications_active', label: 'Cài đặt thông báo' },
         { to: '/settings', icon: 'manage_accounts', label: 'Hồ sơ cá nhân' },
         { to: user?.gender === 'female' ? '/cycles' : '/calendar', icon: 'calendar_month', label: user?.gender === 'female' ? 'Chu kỳ của tôi' : 'Lịch của bạn' },
-      ];
+      ].filter((item) => user?.gender === 'female' || item.to !== '/calendar');
 
   const [dropOpen, setDropOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -114,7 +114,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
         </Link>
 
         {loggedIn ? (
-          <nav className="mx-4 hidden flex-1 items-center justify-center gap-1 rounded-xl bg-gray-100/60 p-1 md:flex">
+          <nav className="mx-4 hidden flex-1 items-center justify-center gap-1 md:flex">
             {dashboardLinks.map(({ to, label, icon }) => {
               const active = location.pathname === to;
               return (
@@ -122,7 +122,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
                   key={to}
                   to={to}
                   className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
-                    active ? 'bg-white text-pink-500 shadow-sm' : 'text-slate-500 hover:bg-white/50 hover:text-slate-900'
+                    active ? 'bg-white/80 text-pink-500 shadow-sm' : 'text-slate-500 hover:bg-white/50 hover:text-slate-900'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[18px]">{icon}</span>

@@ -1,11 +1,24 @@
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import {
+  CirclesFour,
+  FirstAidKit,
+  ForkKnife,
+  Gift,
+  Heart,
+  Heartbeat,
+  MagnifyingGlass,
+  Ticket,
+} from '@phosphor-icons/react';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { bestProductName, cleanProductTitle } from '../utils/affiliateDisplay';
 
-type ProductFilter = 'all' | 'care' | 'wellness' | 'gifts' | 'partner';
+type ProductFilter = 'all' | 'food' | 'outing' | 'care' | 'wellness' | 'gifts' | 'partner';
 type GenderTheme = 'female' | 'male';
+type FilterIcon = typeof CirclesFour;
 
 interface AffiliateProduct {
   _id?: number;
@@ -13,7 +26,7 @@ interface AffiliateProduct {
   name: string;
   description?: string;
   platform?: string;
-  affiliateUrl: string;
+  affiliateUrl?: string;
   imageUrl?: string;
   price?: number;
   symptomCategory?: string;
@@ -25,20 +38,33 @@ interface AffiliateProduct {
   audience?: string;
 }
 
-const filters: Array<{ key: ProductFilter; label: string; hint: string; icon: string }> = [
-  { key: 'all', label: 'Tất cả', hint: 'Gợi ý phù hợp', icon: 'apps' },
-  { key: 'care', label: 'Chăm sóc cơ thể', hint: 'Kỳ kinh, đau bụng', icon: 'health_and_safety' },
-  { key: 'wellness', label: 'Sức khỏe mỗi ngày', hint: 'Thư giãn, phục hồi', icon: 'self_care' },
-  { key: 'gifts', label: 'Quà theo dịp', hint: 'Sinh nhật, ngày lễ', icon: 'redeem' },
-  { key: 'partner', label: 'Cho người ấy', hint: 'Quan tâm tinh tế', icon: 'favorite' },
+interface VoucherOrder {
+  _id: number;
+  productName: string;
+  productImageUrl?: string;
+  sourceName?: string;
+  totalAmount?: number;
+  status: string;
+  voucherCode?: string;
+  voucherLink?: string;
+  failureReason?: string;
+}
+
+const filters: Array<{ key: ProductFilter; label: string; hint: string; icon: FilterIcon }> = [
+  { key: 'all', label: 'Tất cả', hint: 'Gợi ý phù hợp', icon: CirclesFour },
+  { key: 'food', label: 'Ăn uống', hint: 'Cafe, nhà hàng', icon: ForkKnife },
+  { key: 'outing', label: 'Đi chơi', hint: 'Phim, spa, giải trí', icon: Ticket },
+  { key: 'care', label: 'Chăm sóc cơ thể', hint: 'Kỳ kinh, đau bụng', icon: FirstAidKit },
+  { key: 'wellness', label: 'Sức khỏe mỗi ngày', hint: 'Thư giãn, phục hồi', icon: Heartbeat },
+  { key: 'gifts', label: 'Quà theo dịp', hint: 'Sinh nhật, ngày lễ', icon: Gift },
+  { key: 'partner', label: 'Cho người ấy', hint: 'Quan tâm tinh tế', icon: Heart },
 ];
 
 const themes = {
   female: {
-    page: 'from-[#fff1f6] via-white to-[#f7f1ff]',
+    page: 'from-pink-50 via-white to-sky-50',
     panel: 'border-rose-200 bg-white shadow-lg shadow-rose-200/35',
     softPanel: 'border-rose-200 bg-white shadow-sm shadow-rose-100/40',
-    accent: '#eb477e',
     accentText: 'text-pink-600',
     accentBg: 'bg-rose-50',
     accentBorder: 'border-rose-200',
@@ -47,14 +73,13 @@ const themes = {
     chipHover: 'hover:border-rose-200 hover:bg-white hover:text-pink-600',
     heroIcon: 'from-rose-50 to-violet-50 text-pink-500',
     title: 'Sản phẩm chăm sóc sức khỏe cho bạn',
-    subtitle: 'Gợi ý dịu nhẹ cho kỳ kinh, chăm sóc hằng ngày và những món quà nhỏ khi bạn muốn tự thương mình hơn.',
+    subtitle: 'Gợi ý dịu nhẹ cho kỳ kinh, chăm sóc hằng ngày, quà tặng và voucher ăn uống đi chơi từ đối tác.',
     statLabel: 'sản phẩm',
   },
   male: {
-    page: 'from-[#f5fbff] via-white to-[#eff6ff]',
+    page: 'from-sky-50 via-white to-blue-50',
     panel: 'border-sky-100 bg-white shadow-lg shadow-sky-100/60',
     softPanel: 'border-sky-100 bg-[#f8fcff] shadow-sm shadow-sky-100/40',
-    accent: '#3b82f6',
     accentText: 'text-blue-600',
     accentBg: 'bg-blue-50',
     accentBorder: 'border-blue-200',
@@ -63,7 +88,7 @@ const themes = {
     chipHover: 'hover:border-blue-100 hover:text-blue-600',
     heroIcon: 'from-blue-100 to-indigo-100 text-blue-500',
     title: 'Sản phẩm chăm sóc và quà tặng cho người ấy',
-    subtitle: 'Một góc gọn để chọn đồ chăm sóc, món quà đúng dịp và những thứ nhỏ giúp bạn quan tâm tinh tế hơn.',
+    subtitle: 'Một góc gọn để chọn đồ chăm sóc, voucher hẹn hò và món quà nhỏ giúp bạn quan tâm tinh tế hơn.',
     statLabel: 'gợi ý',
   },
 } satisfies Record<GenderTheme, Record<string, string>>;
@@ -91,6 +116,8 @@ function productText(product: AffiliateProduct) {
 function matchesFilter(product: AffiliateProduct, filter: ProductFilter) {
   if (filter === 'all') return true;
   const text = productText(product);
+  if (filter === 'food') return ['an uong', 'cafe', 'coffee', 'tra sua', 'nha hang', 'restaurant', 'food'].some((keyword) => text.includes(keyword));
+  if (filter === 'outing') return ['di choi', 'giai tri', 'phim', 'cinema', 'spa', 'experience'].some((keyword) => text.includes(keyword));
   if (filter === 'care') return ['dau bung', 'kinh', 'chuom', 'mieng dan', 'tra gung', 'cham soc'].some((keyword) => text.includes(keyword));
   if (filter === 'wellness') return ['suc khoe', 'thu gian', 'ngu ngon', 'vitamin', 'phuc hoi', 'wellness'].some((keyword) => text.includes(keyword));
   if (filter === 'gifts') return ['qua', 'gift', 'sinh nhat', 'valentine', '8/3', '20/10', 'hoa'].some((keyword) => text.includes(keyword));
@@ -101,6 +128,20 @@ function matchesFilter(product: AffiliateProduct, filter: ProductFilter) {
 function money(value?: number) {
   if (!value || Number.isNaN(value)) return 'Chưa có giá';
   return `${Math.round(value).toLocaleString('vi-VN')}đ`;
+}
+
+function isGotItVoucher(product: AffiliateProduct) {
+  return (product.platform ?? '').toUpperCase() === 'GOTIT';
+}
+
+function voucherStatusText(status: string) {
+  const normalized = status.toUpperCase();
+  if (normalized === 'DELIVERED') return 'Đã gửi';
+  if (normalized === 'ISSUED') return 'Sẵn sàng';
+  if (normalized === 'ISSUING') return 'Đang phát hành';
+  if (normalized === 'PAYMENT_PENDING') return 'Chờ thanh toán';
+  if (normalized === 'REFUND_REQUIRED') return 'Cần hỗ trợ';
+  return status;
 }
 
 async function openAffiliateProduct(product: AffiliateProduct) {
@@ -114,6 +155,10 @@ async function openAffiliateProduct(product: AffiliateProduct) {
   } catch {
     // Tracking is best-effort; users should still be able to open the product.
   }
+  if (!targetUrl) {
+    toast.error('Sản phẩm chưa có liên kết để mở');
+    return;
+  }
   window.open(targetUrl, '_blank', 'noopener,noreferrer');
 }
 
@@ -122,8 +167,8 @@ function ProductImage({ product, theme }: { product: AffiliateProduct; theme: (t
   const title = bestProductName(product);
   if (!product.imageUrl || failed) {
     return (
-      <div className={`flex h-44 w-full items-center justify-center rounded-[1.75rem] bg-gradient-to-br ${theme.heroIcon}`}>
-        <span className="material-symbols-outlined text-5xl">local_mall</span>
+      <div className={`flex aspect-[4/3] w-full items-center justify-center rounded-[1.75rem] bg-gradient-to-br ${theme.heroIcon}`}>
+        <span className="material-symbols-outlined text-5xl">{isGotItVoucher(product) ? 'local_activity' : 'local_mall'}</span>
       </div>
     );
   }
@@ -131,19 +176,30 @@ function ProductImage({ product, theme }: { product: AffiliateProduct; theme: (t
     <img
       src={product.imageUrl}
       alt={title}
-      loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
-      className="h-44 w-full rounded-[1.75rem] object-cover"
+      loading="lazy"
+      className="aspect-[4/3] w-full rounded-[1.75rem] object-cover"
     />
   );
 }
 
-function ProductCard({ product, themeName }: { product: AffiliateProduct; themeName: GenderTheme }) {
+function ProductCard({
+  product,
+  themeName,
+  onBuyVoucher,
+  buying,
+}: {
+  product: AffiliateProduct;
+  themeName: GenderTheme;
+  onBuyVoucher: (product: AffiliateProduct) => void;
+  buying: boolean;
+}) {
   const theme = themes[themeName];
   const tags = [...(product.symptomTags ?? []), ...(product.phaseTags ?? []), ...(product.goalTags ?? [])].filter(Boolean).slice(0, 4);
   const title = bestProductName(product);
   const description = cleanProductTitle(product.description, 120);
+  const gotItVoucher = isGotItVoucher(product);
 
   return (
     <article className={`group flex h-full flex-col rounded-[2rem] border p-3 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl ${theme.panel}`}>
@@ -151,7 +207,7 @@ function ProductCard({ product, themeName }: { product: AffiliateProduct; themeN
       <div className="flex flex-1 flex-col p-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black uppercase text-white">
-            {product.platform ?? 'Sản phẩm'}
+            {gotItVoucher ? 'Got It' : product.platform ?? 'Sản phẩm'}
           </span>
           <span className={`rounded-full px-3 py-1 text-[11px] font-black ${theme.accentBg} ${theme.accentText}`}>
             {cleanProductTitle(product.sourceName || product.category, 34) || 'Cửa hàng'}
@@ -175,16 +231,17 @@ function ProductCard({ product, themeName }: { product: AffiliateProduct; themeN
 
         <div className="mt-auto pt-5">
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Giá sản phẩm</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{gotItVoucher ? 'Mệnh giá voucher' : 'Giá sản phẩm'}</p>
             <p className="mt-1 text-xl font-black text-slate-950">{money(product.price)}</p>
           </div>
           <button
             type="button"
-            onClick={() => openAffiliateProduct(product)}
-            className={`mt-4 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black text-white shadow-lg transition active:translate-y-[1px] ${theme.cta}`}
+            onClick={() => gotItVoucher ? onBuyVoucher(product) : openAffiliateProduct(product)}
+            disabled={buying}
+            className={`mt-4 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black text-white shadow-lg transition active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-70 ${theme.cta}`}
           >
-            Mở sản phẩm
-            <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+            {gotItVoucher ? (buying ? 'Đang tạo thanh toán...' : 'Mua voucher') : 'Mở sản phẩm'}
+            <span className="material-symbols-outlined text-[18px]">{gotItVoucher ? 'payments' : 'open_in_new'}</span>
           </button>
         </div>
       </div>
@@ -208,6 +265,8 @@ function ProductSkeleton() {
 
 export default function ProductsPage() {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<ProductFilter>('all');
   const [search, setSearch] = useState('');
   const themeName: GenderTheme = user?.gender === 'male' ? 'male' : 'female';
@@ -220,82 +279,155 @@ export default function ProductsPage() {
     staleTime: 5 * 60_000,
   });
 
+  const voucherOrdersQuery = useQuery({
+    queryKey: ['voucher-orders-mine'],
+    queryFn: () => api.get('/voucher-orders/mine').then(({ data }) => data.data as VoucherOrder[]),
+    staleTime: 60_000,
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: (product: AffiliateProduct) => {
+      const productId = product._id ?? product.id;
+      if (!productId) throw new Error('Voucher chưa có mã sản phẩm');
+      return api.post('/voucher-orders/checkout', { productId, quantity: 1 }).then(({ data }) => data.data as { checkoutUrl?: string });
+    },
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ['voucher-orders-mine'] });
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+      toast.error('Chưa nhận được link thanh toán voucher');
+    },
+    onError: (error: unknown) => {
+      const message = error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+      toast.error(message || 'Không tạo được thanh toán voucher');
+    },
+  });
+
+  useEffect(() => {
+    const voucherOrderId = searchParams.get('voucherOrderId');
+    const voucherCanceled = searchParams.get('voucherCanceled');
+    if (!voucherOrderId && !voucherCanceled) return;
+    if (voucherOrderId) {
+      toast.success('Đã ghi nhận thanh toán. Voucher sẽ xuất hiện trong ví sau khi webhook hoàn tất.');
+      void queryClient.invalidateQueries({ queryKey: ['voucher-orders-mine'] });
+    }
+    if (voucherCanceled) {
+      toast('Bạn đã hủy thanh toán voucher.');
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('voucherOrderId');
+    next.delete('voucherCanceled');
+    setSearchParams(next, { replace: true });
+  }, [queryClient, searchParams, setSearchParams]);
+
   const products = productsQuery.data ?? [];
+  const voucherOrders = voucherOrdersQuery.data ?? [];
   const visibleProducts = useMemo(() => {
     const keyword = normalize(search.trim());
     return products.filter((product) => matchesFilter(product, activeFilter) && (!keyword || productText(product).includes(keyword)));
   }, [activeFilter, products, search]);
 
-  const careCount = useMemo(() => products.filter((product) => matchesFilter(product, 'care')).length, [products]);
-  const giftCount = useMemo(() => products.filter((product) => matchesFilter(product, 'gifts')).length, [products]);
+  const buyingProductId = checkoutMutation.variables?._id ?? checkoutMutation.variables?.id;
 
   return (
     <div className={`rounded-[2.5rem] border border-white/80 bg-gradient-to-br p-3 shadow-inner md:p-4 ${theme.page}`}>
       <div className="space-y-6">
-        <section className={`rounded-[2rem] border p-5 shadow-sm backdrop-blur md:p-6 ${theme.panel}`}>
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <section className={`rounded-2xl border p-4 shadow-sm backdrop-blur ${theme.panel}`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className={`text-xs font-black uppercase tracking-[0.22em] ${theme.accentText}`}>Hi Shop gợi ý</p>
-              <h1 className="mt-3 max-w-3xl text-3xl font-black leading-tight text-slate-950 md:text-4xl">
+              <p className={`text-xs font-black ${theme.accentText}`}>Hi Shop gợi ý</p>
+              <h1 className="mt-1 max-w-3xl text-2xl font-black leading-tight text-slate-950 md:text-3xl">
                 {theme.title}, {firstName}
               </h1>
-              <p className="mt-3 max-w-2xl text-sm font-semibold leading-relaxed text-slate-500 md:text-base">{theme.subtitle}</p>
+              <p className="mt-1 max-w-2xl text-sm font-semibold text-slate-500">{theme.subtitle}</p>
             </div>
-
-            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-              <div className="rounded-2xl bg-slate-950 px-5 py-4 text-white shadow-sm">
-                <p className="text-2xl font-black">{products.length}</p>
-                <p className="text-xs font-bold text-white/70">{theme.statLabel}</p>
-              </div>
-              <div className={`rounded-2xl px-5 py-4 shadow-sm ${theme.accentBg}`}>
-                <p className={`text-2xl font-black ${theme.accentText}`}>{careCount}</p>
-                <p className="text-xs font-bold text-slate-500">chăm sóc</p>
-              </div>
-              <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
-                <p className="text-2xl font-black text-slate-950">{giftCount}</p>
-                <p className="text-xs font-bold text-slate-500">quà tặng</p>
-              </div>
-            </div>
+            <span className={`w-fit rounded-xl px-3 py-2 text-xs font-black ${theme.accentBg} ${theme.accentText}`}>{products.length} {theme.statLabel}</span>
           </div>
         </section>
 
         <section className={`rounded-[2rem] border p-4 shadow-sm backdrop-blur ${theme.panel}`}>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap">
+          <div className="flex flex-col gap-3">
+            <label className="relative min-w-0 w-full">
+              <MagnifyingGlass size={20} weight="bold" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Tìm túi chườm, quà, trà, voucher..."
+                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-4 text-sm font-bold text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-4 ${theme.accentBorder}`}
+              />
+            </label>
+            <div className="scrollbar-thin scrollbar-thumb-pink-300 scrollbar-track-transparent flex max-w-full gap-2 overflow-x-auto pb-1">
               {filters.map((filter) => {
                 const active = activeFilter === filter.key;
+                const FilterIcon = filter.icon;
                 return (
                   <button
                     key={filter.key}
                     type="button"
                     onClick={() => setActiveFilter(filter.key)}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition active:translate-y-[1px] ${
+                    className={`flex min-w-max items-center gap-2 rounded-xl border px-3 py-2 text-left transition active:translate-y-[1px] ${
                       active ? theme.chipActive : `border-slate-100 bg-white text-slate-500 ${theme.chipHover}`
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[22px]">{filter.icon}</span>
+                    <FilterIcon size={22} weight={active ? 'fill' : 'duotone'} className="shrink-0" />
                     <span>
                       <span className="block text-sm font-black">{filter.label}</span>
-                      <span className="block text-xs font-semibold opacity-75">{filter.hint}</span>
+                      <span className="hidden text-xs font-semibold opacity-75 sm:block">{filter.hint}</span>
                     </span>
                   </button>
                 );
               })}
             </div>
-            <label className="relative min-w-0 lg:w-72">
-              <span className="material-symbols-outlined pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[20px] text-slate-400">search</span>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Tìm túi chườm, quà, trà..."
-                className={`h-12 w-full rounded-2xl border bg-white pl-11 pr-4 text-sm font-bold text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-4 ${theme.accentBorder}`}
-              />
-            </label>
           </div>
         </section>
 
+        {voucherOrders.length > 0 ? (
+          <section className={`rounded-[2rem] border p-5 shadow-sm backdrop-blur ${theme.softPanel}`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className={`text-xs font-black uppercase tracking-[0.22em] ${theme.accentText}`}>Ví voucher</p>
+                <h2 className="mt-2 text-xl font-black text-slate-950">Voucher Got It của bạn</h2>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-black ${theme.accentBg} ${theme.accentText}`}>
+                {voucherOrders.length} voucher
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {voucherOrders.slice(0, 3).map((order) => (
+                <article key={order._id} className="rounded-3xl border border-white bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 text-sm font-black text-slate-950">{order.productName}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-400">{order.sourceName || 'Got It'} · {money(order.totalAmount)}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-black ${theme.accentBg} ${theme.accentText}`}>
+                      {voucherStatusText(order.status)}
+                    </span>
+                  </div>
+                  {order.voucherCode ? (
+                    <div className="mt-4 rounded-2xl bg-slate-950 px-4 py-3 text-white">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/60">Mã voucher</p>
+                      <p className="mt-1 break-all text-lg font-black">{order.voucherCode}</p>
+                    </div>
+                  ) : null}
+                  {order.voucherLink ? (
+                    <a href={order.voucherLink} target="_blank" rel="noreferrer" className={`mt-3 flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-black text-white ${theme.cta}`}>
+                      Mở voucher
+                    </a>
+                  ) : null}
+                  {order.failureReason ? <p className="mt-3 text-xs font-semibold text-red-500">{order.failureReason}</p> : null}
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {productsQuery.isLoading ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {Array.from({ length: 6 }, (_, index) => <ProductSkeleton key={index} />)}
           </div>
         ) : productsQuery.isError ? (
@@ -315,9 +447,18 @@ export default function ProductsPage() {
           </section>
         ) : (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {visibleProducts.map((product) => (
-              <ProductCard key={product._id ?? product.id ?? product.affiliateUrl} product={product} themeName={themeName} />
-            ))}
+            {visibleProducts.map((product) => {
+              const productId = product._id ?? product.id;
+              return (
+                <ProductCard
+                  key={productId ?? product.affiliateUrl ?? product.name}
+                  product={product}
+                  themeName={themeName}
+                  onBuyVoucher={(selectedProduct) => checkoutMutation.mutate(selectedProduct)}
+                  buying={checkoutMutation.isPending && buyingProductId === productId}
+                />
+              );
+            })}
           </div>
         )}
       </div>

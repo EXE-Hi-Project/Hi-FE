@@ -10,10 +10,10 @@ import {
   Heart,
   LockKey,
   PaperPlaneTilt,
-  SlidersHorizontal,
   UserPlus,
   Gift,
   PencilSimple,
+  Plus,
 } from '@phosphor-icons/react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -26,14 +26,23 @@ import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { useSubscription } from '../../hooks/useSubscription';
 import PremiumLockCard from '../subscription/PremiumLockCard';
-import CoupleAnniversaryManager from './CoupleAnniversaryManager';
+import AnniversaryEventModal from './AnniversaryEventModal';
+import { AnniversarySticker, AnniversarySymbol } from './AnniversaryVisuals';
 import type {
+  CoupleAnniversaryEvent,
+  CoupleAnniversarySummary,
   CoupleQuestionHistory,
   CoupleQuestionSession,
 } from '../../types/shared';
+import {
+  getDayAnniversaryOccurrences,
+  anniversaryBackground,
+  anniversaryEffectClass,
+  normalizeAnniversarySummary,
+} from '../../utils/coupleAnniversaryCalendar';
 
 type Variant = 'female' | 'male';
-type ViewKey = 'today' | 'history' | 'anniversaries';
+type ViewKey = 'today' | 'timeline';
 
 interface PartnerResponse {
   partner?: { id?: string; name?: string; avatar?: string; gender?: string } | null;
@@ -81,7 +90,9 @@ function buildCalendarDays(date: Date) {
   const first = new Date(date.getFullYear(), date.getMonth(), 1);
   const mondayOffset = (first.getDay() + 6) % 7;
   const start = new Date(first.getFullYear(), first.getMonth(), first.getDate() - mondayOffset);
-  return Array.from({ length: 42 }, (_, index) => {
+  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const visibleDays = Math.ceil((mondayOffset + daysInMonth) / 7) * 7;
+  return Array.from({ length: visibleDays }, (_, index) => {
     const day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
     return {
       iso: toIsoDate(day),
@@ -96,6 +107,13 @@ function statusMeta(question: CoupleQuestionSession) {
   if (question.status === 'UNLOCKED') return { label: 'Đã mở', icon: Check, tone: 'text-emerald-600 bg-emerald-50/80 border-emerald-100/80' };
   if (question.status === 'WAITING_PARTNER') return { label: 'Đang chờ', icon: Clock, tone: 'text-amber-600 bg-amber-50/80 border-amber-100/80' };
   return { label: 'Chưa trả lời', icon: LockKey, tone: 'text-slate-500 bg-slate-50/80 border-slate-100/80' };
+}
+
+function questionDotClass(question: CoupleQuestionSession | undefined, isMale: boolean) {
+  if (!question) return 'bg-transparent';
+  if (question.status === 'UNLOCKED') return 'bg-emerald-400 shadow-sm shadow-emerald-400/30';
+  if (question.status === 'WAITING_PARTNER') return 'bg-amber-400 shadow-sm shadow-amber-400/30';
+  return isMale ? 'bg-blue-400 shadow-sm shadow-blue-400/30' : 'bg-pink-400 shadow-sm shadow-pink-400/30';
 }
 
 function QuestionSkeleton() {
@@ -115,10 +133,8 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeView: ViewKey =
-    searchParams.get('view') === 'history'
-      ? 'history'
-      : searchParams.get('view') === 'anniversaries'
-      ? 'anniversaries'
+    searchParams.get('view') === 'timeline' || searchParams.get('view') === 'history' || searchParams.get('view') === 'anniversaries'
+      ? 'timeline'
       : 'today';
   const isMale = variant === 'male';
   const hasPartner = Boolean(user?.partnerId);
@@ -130,6 +146,9 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
   const [isEditingToday, setIsEditingToday] = useState(false);
   const [isEditingHistory, setIsEditingHistory] = useState(false);
   const [historyAnswerVal, setHistoryAnswerVal] = useState('');
+  const [isAnniversaryModalOpen, setIsAnniversaryModalOpen] = useState(false);
+  const [anniversaryModalDate, setAnniversaryModalDate] = useState('');
+  const [anniversaryModalEvent, setAnniversaryModalEvent] = useState<CoupleAnniversaryEvent | null>(null);
   const currentMonthRange = useMemo(() => monthRange(visibleMonth), [visibleMonth]);
   const calendarDays = useMemo(() => buildCalendarDays(visibleMonth), [visibleMonth]);
 
@@ -154,12 +173,28 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
       params: { page: 0, limit: 62, from: currentMonthRange.from, to: currentMonthRange.to },
     })
       .then(({ data }) => data.history as CoupleQuestionHistory),
-    enabled: hasPartner && hasCouplePremium && activeView === 'history',
+    enabled: hasPartner && hasCouplePremium && activeView === 'timeline',
+  });
+  const anniversariesQuery = useQuery<CoupleAnniversarySummary>({
+    queryKey: ['partner-anniversaries'],
+    queryFn: () => api.get('/partner/anniversaries').then(({ data }) => normalizeAnniversarySummary(data.anniversaries)),
+    enabled: hasPartner && hasCouplePremium && activeView === 'timeline',
+    staleTime: 60_000,
   });
   const historyItems = useMemo(() => historyQuery.data?.items ?? [], [historyQuery.data?.items]);
   const questionsByDate = useMemo(() => {
     return new Map(historyItems.map((question) => [question.questionDate.slice(0, 10), question]));
   }, [historyItems]);
+  const selectedAnniversaryOccurrences = useMemo(() => {
+    if (!selectedHistoryDate || !anniversariesQuery.data) return [];
+    const selectedDate = new Date(`${selectedHistoryDate}T00:00:00`);
+    return getDayAnniversaryOccurrences(
+      anniversariesQuery.data,
+      selectedHistoryDate,
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+    );
+  }, [anniversariesQuery.data, selectedHistoryDate]);
 
   const answerForm = useForm<AnswerForm>({
     resolver: zodResolver(answerSchema),
@@ -181,18 +216,18 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
   }, [todayQuery.data?._id]);
 
   useEffect(() => {
-    if (activeView !== 'history') return;
+    if (activeView !== 'timeline') return;
     if (selectedHistoryDate) {
       setSelectedQuestion(questionsByDate.get(selectedHistoryDate) ?? null);
       return;
     }
-    if (historyItems.length) {
-      const firstQuestion = historyItems[0];
-      setSelectedHistoryDate(firstQuestion.questionDate.slice(0, 10));
-      setSelectedQuestion(firstQuestion);
-    } else {
-      setSelectedQuestion(null);
+    const firstQuestionDate = historyItems[0]?.questionDate.slice(0, 10);
+    if (firstQuestionDate) {
+      setSelectedHistoryDate(firstQuestionDate);
+      setSelectedQuestion(historyItems[0]);
+      return;
     }
+    setSelectedQuestion(null);
   }, [activeView, historyItems, questionsByDate, selectedHistoryDate]);
 
   useEffect(() => {
@@ -257,6 +292,12 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
     setIsEditingHistory(false);
   };
 
+  const openAnniversaryModal = (date: string, event: CoupleAnniversaryEvent | null = null) => {
+    setAnniversaryModalDate(date);
+    setAnniversaryModalEvent(event);
+    setIsAnniversaryModalOpen(true);
+  };
+
   // Reading this as: Couple features dashboard for couples interested in health and relationships, with a calm, intimate, and modern vibe language, leaning toward custom Tailwind theme + delicate cards split + smooth spring physics motion.
   return (
     <div className={`min-h-[100dvh] ${pageSurface} font-sans text-slate-900`}>
@@ -275,15 +316,6 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
               Trả lời riêng. Khi cả hai hoàn thành, câu trả lời sẽ cùng được mở.
             </p>
           </div>
-          <Link
-            to={settingsPath}
-            className={`hi-btn-secondary gap-2 px-5 py-2.5 text-sm self-start md:self-auto ${
-              isMale ? 'focus:ring-blue-200' : 'focus:ring-pink-200'
-            }`}
-          >
-            <SlidersHorizontal size={18} />
-            Cài đặt thông báo
-          </Link>
         </header>
 
         <div className={`mt-8 inline-flex rounded-xl border p-1 shadow-sm backdrop-blur bg-white/80 ${
@@ -291,8 +323,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
         }`}>
           {([
             { key: 'today' as const, label: 'Hôm nay', icon: Heart },
-            { key: 'history' as const, label: 'Lịch sử', icon: CalendarBlank },
-            { key: 'anniversaries' as const, label: 'Kỷ niệm', icon: Gift },
+            { key: 'timeline' as const, label: 'Kỷ niệm & câu hỏi', icon: Gift },
           ]).map((item) => {
             const Icon = item.icon;
             const active = activeView === item.key;
@@ -339,7 +370,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
             <PremiumLockCard
               accent={isMale ? 'blue' : 'pink'}
               title="Mở trải nghiệm cặp đôi nâng cao"
-              description="Chỉ cần một trong hai tài khoản có Premium để cả hai dùng câu hỏi hằng ngày, lịch sử trả lời, hội thoại theo chủ đề và gợi ý chăm sóc theo ngữ cảnh."
+              description="Chỉ cần một trong hai tài khoản có Hi Pro hoặc Hi Max để cả hai dùng câu hỏi, lịch sử và hội thoại theo chủ đề."
             />
           </section>
         ) : activeView === 'today' ? (
@@ -386,7 +417,12 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
 
                 <div className="px-6 py-9 md:px-12 md:py-12">
                   <div className="mx-auto max-w-3xl text-center">
-                    <p className={`text-xs uppercase tracking-widest font-black ${accentText}`}>Dành cho bạn và {partnerName}</p>
+                    <div className={`mx-auto inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-xs font-extrabold shadow-sm ${isMale ? 'border-blue-100 text-blue-700' : 'border-pink-100 text-pink-700'}`}>
+                      <span className={`grid size-7 place-items-center rounded-full text-[10px] text-white ${isMale ? 'bg-blue-500' : 'bg-pink-500'}`}>{user?.name?.trim().charAt(0).toUpperCase() || 'B'}</span>
+                      <Heart size={15} weight="fill" />
+                      <span className="grid size-7 place-items-center rounded-full bg-violet-500 text-[10px] text-white">{partnerName.trim().charAt(0).toUpperCase() || 'N'}</span>
+                      <span className="ml-1">Bạn và {partnerName}</span>
+                    </div>
                     <h2 className="mt-4 text-2xl font-black leading-snug text-slate-900 md:text-4xl md:leading-normal" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
                       {todayQuery.data.questionText}
                     </h2>
@@ -555,19 +591,33 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
               </>
             )}
           </section>
-        ) : activeView === 'history' ? (
+        ) : (
           <div className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]" style={{ contentVisibility: 'auto', containIntrinsicSize: '760px' }}>
             <section className={`rounded-[2rem] border bg-white/95 p-5 md:p-6 shadow-[0_16px_48px_rgba(148,163,184,0.08)] transition-all duration-300 ${
               isMale ? 'border-blue-100/60' : 'border-pink-100/60'
             }`}>
-              <div className="px-2 pb-4">
-                <h2 className="text-xl font-black text-slate-900" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Những câu hỏi đã qua</h2>
-                <p className="mt-1.5 text-sm font-semibold text-slate-400">Chọn ngày trên lịch để xem hoặc chỉnh sửa câu trả lời.</p>
+              <div className="flex flex-col gap-3 px-2 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Kỷ niệm & câu hỏi</h2>
+                  <p className="mt-1.5 text-sm font-semibold text-slate-400">Chọn ngày để xem kỷ niệm, câu hỏi và chỉnh sửa câu trả lời.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openAnniversaryModal(selectedHistoryDate ?? toIsoDate(new Date()))}
+                  className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black transition active:scale-95 ${
+                    isMale
+                      ? 'border-blue-100 bg-blue-50 text-blue-600 hover:bg-blue-100'
+                      : 'border-pink-100 bg-pink-50 text-pink-600 hover:bg-pink-100'
+                  }`}
+                >
+                  <Plus size={15} weight="bold" />
+                  Thêm kỷ niệm
+                </button>
               </div>
-              {historyQuery.isLoading ? (
+              {historyQuery.isLoading || anniversariesQuery.isLoading ? (
                 <QuestionSkeleton />
-              ) : historyQuery.isError ? (
-                <p className="px-2 py-10 text-center text-sm font-bold text-rose-600">Không tải được lịch sử câu hỏi.</p>
+              ) : historyQuery.isError || anniversariesQuery.isError ? (
+                <p className="px-2 py-10 text-center text-sm font-bold text-rose-600">Không tải được lịch chung lúc này.</p>
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-3 py-1.5">
@@ -600,15 +650,21 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
 
                   <div className="grid grid-cols-7 gap-1.5">
                     {calendarDays.map((day) => {
+                      if (!day.inCurrentMonth) {
+                        return <span key={day.iso} className="min-h-[34px] sm:min-h-10" />;
+                      }
                       const question = questionsByDate.get(day.iso);
                       const selected = selectedHistoryDate === day.iso;
-                      const dotClass = question?.status === 'UNLOCKED'
-                        ? 'bg-emerald-400 shadow-sm shadow-emerald-400/30'
-                        : question?.status === 'WAITING_PARTNER'
-                        ? 'bg-amber-400 shadow-sm shadow-amber-400/30'
-                        : question
-                        ? (isMale ? 'bg-blue-400 shadow-sm shadow-blue-400/30' : 'bg-pink-400 shadow-sm shadow-pink-400/30')
-                        : 'bg-transparent';
+                      const date = new Date(`${day.iso}T00:00:00`);
+                      const occurrences = getDayAnniversaryOccurrences(
+                        anniversariesQuery.data,
+                        day.iso,
+                        date.getFullYear(),
+                        date.getMonth(),
+                      );
+                      const primaryOccurrence = occurrences[0];
+                      const decorated = Boolean(primaryOccurrence);
+                      const dotClass = questionDotClass(question, isMale);
                       return (
                       <button
                         key={day.iso}
@@ -618,33 +674,51 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                           setSelectedQuestion(question ?? null);
                           setIsEditingHistory(false);
                         }}
-                        className={`flex aspect-square min-h-[36px] sm:min-h-11 flex-col items-center justify-center rounded-lg sm:rounded-xl border text-xs sm:text-sm font-black transition active:scale-[0.98] ${
+                        className={`group relative isolate flex aspect-square min-h-[42px] flex-col items-center justify-center overflow-visible rounded-xl border p-1 text-xs sm:min-h-12 sm:text-sm font-black transition active:scale-[0.98] ${
                           selected
                             ? isMale
-                              ? 'border-blue-400 bg-blue-50/80 text-blue-600 shadow-sm shadow-blue-500/5'
-                              : 'border-pink-400 bg-pink-50/80 text-pink-600 shadow-sm shadow-pink-500/5'
-                            : day.inCurrentMonth
-                            ? 'border-slate-100 bg-white text-slate-700 hover:border-slate-200/80 hover:bg-slate-50/50'
-                            : 'border-transparent bg-slate-50/10 text-slate-300'
+                              ? 'bg-blue-50/90 text-blue-600 ring-2 ring-blue-300 ring-offset-1'
+                              : 'bg-pink-50/90 text-pink-600 ring-2 ring-pink-300 ring-offset-1'
+                            : decorated
+                              ? `${anniversaryBackground(primaryOccurrence?.event.color, primaryOccurrence?.event.effect)} ${anniversaryEffectClass(primaryOccurrence?.event.effect)} hover:-translate-y-0.5 hover:shadow-md`
+                              : 'border-slate-100 bg-slate-50/70 text-slate-700 hover:bg-white hover:shadow-sm'
                         }`}
                       >
-                        <span className={day.isToday ? 'rounded-lg bg-slate-900 px-1.5 py-0.5 text-white text-[11px]' : ''}>{day.label}</span>
-                        <span className={`mt-1 block size-1.5 rounded-full ${dotClass}`} />
+                        <span className={day.isToday ? 'rounded-lg bg-slate-900 px-1.5 py-0.5 text-white text-[11px]' : 'relative z-10'}>{day.label}</span>
+                        <div className="relative z-10 mt-1 flex h-4 items-center justify-center gap-1">
+                          {decorated && (
+                            <AnniversarySymbol name={primaryOccurrence.event.icon} size={14} className="anniversary-icon text-current" />
+                          )}
+                          {question && <span className={`block size-1.5 rounded-full ${dotClass}`} />}
+                        </div>
+                        {(decorated || question) && (
+                          <span className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 hidden w-56 -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-xl opacity-0 transition group-hover:opacity-100 sm:block">
+                            {decorated && (
+                              <span className="block text-xs font-extrabold text-slate-900">{primaryOccurrence.event.title}</span>
+                            )}
+                            {question && (
+                              <span className="mt-1 block text-[11px] font-semibold leading-snug text-slate-500">
+                                {question.questionText}
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </button>
                       );
                     })}
                   </div>
 
                   <div className="flex flex-wrap gap-x-3 gap-y-1.5 px-1 text-[10px] font-bold text-slate-400">
+                    <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-pink-400" />Kỷ niệm</span>
                     <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-400" />Đã mở</span>
                     <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-amber-400" />Đang chờ</span>
                     <span className="inline-flex items-center gap-1"><span className={`size-2 rounded-full ${isMale ? 'bg-blue-400' : 'bg-pink-400'}`} />Chưa trả lời</span>
                   </div>
 
-                  {historyItems.length === 0 && (
+                  {historyItems.length === 0 && (anniversariesQuery.data?.events?.length ?? 0) === 0 && !anniversariesQuery.data?.startDate && (
                     <div className="rounded-2xl bg-slate-50/50 border border-slate-100/50 px-4 py-8 text-center">
                       <CalendarBlank size={30} className="mx-auto text-slate-300" />
-                      <p className="mt-3 text-sm font-semibold text-slate-400">Tháng này chưa có câu hỏi nào.</p>
+                      <p className="mt-3 text-sm font-semibold text-slate-400">Tháng này chưa có câu hỏi hoặc kỷ niệm nào.</p>
                     </div>
                   )}
                 </div>
@@ -654,7 +728,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
             <section className={`rounded-[2rem] border bg-white/95 p-6 shadow-[0_16px_48px_rgba(148,163,184,0.08)] transition-all duration-300 ${
               isMale ? 'border-blue-100/60' : 'border-pink-100/60'
             }`}>
-              {!selectedQuestion ? (
+              {!selectedQuestion && selectedAnniversaryOccurrences.length === 0 ? (
                 <div className="grid min-h-[360px] place-items-center text-center">
                   <div className="max-w-xs">
                     <div className={`mx-auto grid size-12 place-items-center rounded-2xl ${
@@ -663,18 +737,57 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                       <Heart size={24} weight="duotone" />
                     </div>
                     <p className="mt-4 text-sm font-semibold leading-relaxed text-slate-400">
-                      {selectedHistoryDate ? 'Ngày này không có câu hỏi nào được lưu lại.' : 'Hãy chọn một ngày trên lịch để xem chi tiết câu hỏi và câu trả lời nhé.'}
+                      {selectedHistoryDate ? 'Ngày này chưa có câu hỏi hoặc kỷ niệm nào.' : 'Hãy chọn một ngày trên lịch để xem chi tiết câu hỏi, kỷ niệm và câu trả lời nhé.'}
                     </p>
                   </div>
                 </div>
               ) : (
                 <>
-                  <p className="text-xs font-black uppercase tracking-wider text-slate-400">{dateLabel(selectedQuestion.questionDate)}</p>
-                  <h2 className="mt-3 text-xl md:text-2xl font-black leading-snug text-slate-900" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
-                    {selectedQuestion.questionText}
-                  </h2>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-400">{dateLabel(selectedQuestion?.questionDate ?? selectedHistoryDate ?? undefined)}</p>
+                  {selectedAnniversaryOccurrences.length > 0 && (
+                    <div className="mt-4 space-y-3">
+                      {selectedAnniversaryOccurrences.map((occurrence) => (
+                        <article
+                          key={occurrence.key}
+                          className={`flex items-start gap-3 rounded-2xl border p-4 ${
+                            isMale ? 'border-blue-100 bg-blue-50/30' : 'border-pink-100 bg-pink-50/30'
+                          }`}
+                        >
+                          <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white shadow-sm">
+                            <AnniversarySticker name={occurrence.event.sticker} size={30} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h3 className="text-sm font-black text-slate-900">{occurrence.event.title}</h3>
+                              <button
+                                type="button"
+                                onClick={() => openAnniversaryModal(occurrence.displayDate, occurrence.event)}
+                                className={`inline-flex items-center gap-1 text-xs font-bold ${accentText} hover:underline`}
+                              >
+                                <PencilSimple size={13} />
+                                Sửa
+                              </button>
+                            </div>
+                            <p className="mt-1 text-xs font-semibold text-slate-400">
+                              {occurrence.isStartDate ? 'Ngày bên nhau' : 'Kỷ niệm đặc biệt'}
+                            </p>
+                            {occurrence.event.note && (
+                              <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-relaxed text-slate-600">
+                                {occurrence.event.note}
+                              </p>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                  {selectedQuestion && (
+                    <h2 className="mt-5 text-xl md:text-2xl font-black leading-snug text-slate-900" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+                      {selectedQuestion.questionText}
+                    </h2>
+                  )}
                   <div className="mt-7 space-y-4">
-                    {selectedQuestion.myAnswer && !isEditingHistory ? (
+                    {selectedQuestion?.myAnswer && !isEditingHistory ? (
                       <article className="relative overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/50 p-5 transition-all hover:bg-slate-50/80">
                         <p className="text-xs font-black uppercase tracking-wider text-slate-400">Bạn đã viết</p>
                         <p className="mt-2.5 text-sm font-medium leading-relaxed text-slate-700">
@@ -688,7 +801,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                           <PencilSimple size={14} /> Chỉnh sửa câu trả lời
                         </button>
                       </article>
-                    ) : (!selectedQuestion.myAnswer || isEditingHistory) ? (
+                    ) : selectedQuestion && (!selectedQuestion.myAnswer || isEditingHistory) ? (
                       <form
                         onSubmit={(e) => {
                           e.preventDefault();
@@ -728,7 +841,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                       </form>
                     ) : null}
 
-                    {selectedQuestion.partnerAnswer && (
+                    {selectedQuestion?.partnerAnswer && (
                       <article className={`relative overflow-hidden rounded-2xl border p-5 transition-all ${
                         isMale
                           ? 'border-blue-100 bg-blue-50/30 hover:bg-blue-50/50'
@@ -740,7 +853,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                         </p>
                       </article>
                     )}
-                    {!selectedQuestion.activePair && (
+                    {selectedQuestion && !selectedQuestion.activePair && (
                       <p className="rounded-2xl bg-amber-50/50 border border-amber-100/60 p-4 text-sm font-semibold leading-relaxed text-amber-700">
                         Lịch sử chung đã khóa. Bạn chỉ có thể xem nội dung do mình tạo.
                       </p>
@@ -750,9 +863,14 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
               )}
             </section>
           </div>
-        ) : (
-          <CoupleAnniversaryManager variant={variant} />
         )}
+        <AnniversaryEventModal
+          open={isAnniversaryModalOpen}
+          onClose={() => setIsAnniversaryModalOpen(false)}
+          date={anniversaryModalDate}
+          existingEvent={anniversaryModalEvent}
+          variant={variant}
+        />
       </main>
     </div>
   );

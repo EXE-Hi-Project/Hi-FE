@@ -307,7 +307,7 @@ export default function AdminRevenuePanel() {
             </label>
           </div>
           <dl className="mt-6 space-y-3 text-sm">
-            <div className="flex justify-between"><dt className="text-slate-500">Premium ước tính</dt><dd className="font-bold">{projectedPaidUsers} người</dd></div>
+            <div className="flex justify-between"><dt className="text-slate-500">Hi Pro/Max ước tính</dt><dd className="font-bold">{projectedPaidUsers} người</dd></div>
             <div className="flex justify-between"><dt className="text-slate-500">MRR ước tính</dt><dd className="font-bold">${projectedMrr.toFixed(2)}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-500">Chi phí AI ước tính</dt><dd className="font-bold">${report.financialReport.estimatedAiCostMonthlyUsd.toFixed(2)}</dd></div>
             <div className="flex justify-between border-t border-slate-100 pt-3"><dt className="text-slate-700">Lợi nhuận gộp ước tính</dt><dd className="font-extrabold">${projectedProfit.toFixed(2)}</dd></div>

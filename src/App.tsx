@@ -23,6 +23,7 @@ const ProductsPage = lazy(() => import('./pages/ProductsPage'));
 const MaleDashboardPage = lazy(() => import('./pages/MaleDashboardPage'));
 const MaleSettingsNotificationsPage = lazy(() => import('./pages/MaleSettingsNotificationsPage'));
 const PartnerPage = lazy(() => import('./pages/PartnerPage'));
+const PartnerInvitePage = lazy(() => import('./pages/PartnerInvitePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const Layout = lazy(() => import('./components/layout/Layout'));
 const FloatingHiChat = lazy(() => import('./components/chat/FloatingHiChat'));
@@ -201,6 +202,7 @@ export default function App() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/help" element={<HelpPage />} />
+      <Route path="/connect" element={<PartnerInvitePage />} />
       <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
       {/* Female dashboard — standalone (no sidebar Layout) */}
       <Route path="/female-dashboard" element={<UserOnlyRoute><ProtectedRoute><FemaleDashboardPage /></ProtectedRoute></UserOnlyRoute>} />

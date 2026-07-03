@@ -298,14 +298,6 @@ export default function AdminUsersPanel() {
                       </Button>
                     <Button
                       size="sm"
-                      variant={user.role === 'admin' ? 'ghost' : 'secondary'}
-                      disabled={user.accountStatus === 'DELETED'}
-                      onClick={() => setPendingAction({ type: 'role', user, nextRole: user.role === 'admin' ? 'user' : 'admin' })}
-                    >
-                      {user.role === 'admin' ? 'Hạ quyền' : 'Nâng Admin'}
-                    </Button>
-                    <Button
-                      size="sm"
                       variant="outline"
                       disabled={user.accountStatus === 'DELETED'}
                       onClick={() => {

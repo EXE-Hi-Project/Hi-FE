@@ -313,7 +313,7 @@ export default function FloatingHiChat() {
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex size-14 items-center justify-center rounded-full border border-slate-100 bg-white shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl" aria-label="Mở Hi AI chat">
         {open
           ? <span className="material-symbols-outlined text-[26px] text-slate-500">close</span>
-          : <HiLogo size={52} radius={18} />}
+          : <HiLogo size={52} radius={24} />}
       </button>
     </div>
   );

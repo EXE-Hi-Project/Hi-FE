@@ -18,6 +18,7 @@ import {
   Funnel,
   Clock,
   Browser,
+  UsersThree,
 } from '@phosphor-icons/react';
 import api from '../../lib/api';
 import Spinner from '../ui/Spinner';
@@ -29,12 +30,20 @@ interface OverviewStats {
   totalEvents: number;
   totalClicks: number;
   totalPageViews: number;
+  dailyActiveUsersToday?: number;
+  dailyActiveUsers7dAvg?: number;
 }
 
 interface TrafficPoint {
   date: string;
   label: string;
   pageViews: number;
+}
+
+interface DailyActiveUserPoint {
+  date: string;
+  label: string;
+  activeUsers: number;
 }
 
 interface HourlyPoint {
@@ -63,6 +72,7 @@ interface FunnelStep {
 interface AnalyticsStats {
   overview: OverviewStats;
   trafficTrend: TrafficPoint[];
+  dailyActiveUsersTrend?: DailyActiveUserPoint[];
   hourlyTraffic: HourlyPoint[];
   topPages: TopPageItem[];
   clickRanking: ClickRankingItem[];
@@ -97,12 +107,17 @@ export default function AdminAnalyticsPanel() {
     );
   }
 
-  const { overview, trafficTrend, hourlyTraffic, topPages, clickRanking, conversionFunnel } = data;
+  const { overview, trafficTrend, dailyActiveUsersTrend = [], hourlyTraffic, topPages, clickRanking, conversionFunnel } = data;
+  const dailyActiveUsersByDate = new Map(dailyActiveUsersTrend.map((point) => [point.date, point.activeUsers]));
+  const trafficAndUsersTrend = trafficTrend.map((point) => ({
+    ...point,
+    activeUsers: dailyActiveUsersByDate.get(point.date) ?? 0,
+  }));
 
   return (
     <div className="space-y-6">
       {/* ─── CARDS OVERVIEW ────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         {/* Card 1: Unique Sessions */}
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex items-center gap-4">
           <div className="p-3 rounded-xl bg-sky-50 border border-sky-100/50 text-sky-500">
@@ -143,6 +158,21 @@ export default function AdminAnalyticsPanel() {
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1.5">Tỷ lệ Chuyển đổi Chung</p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {overview.convertedSessions} / {overview.totalSessions} sessions kích hoạt thành công
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white border border-emerald-100/70 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100/70 text-emerald-500">
+            <UsersThree size={24} weight="bold" />
+          </div>
+          <div>
+            <p className="text-2xl font-black text-emerald-600 tracking-tight leading-none">
+              {(overview.dailyActiveUsersToday ?? 0).toLocaleString()}
+            </p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1.5">Người dùng hôm nay</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              TB 7 ngày: {overview.dailyActiveUsers7dAvg ?? 0} user đăng nhập
             </p>
           </div>
         </div>
@@ -194,19 +224,23 @@ export default function AdminAnalyticsPanel() {
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-1.5">
             <ChartLineUp size={18} className="text-sky-500" weight="bold" />
-            <h3 className="text-sm font-bold text-slate-800">Traffic xu hướng truy cập (30 ngày gần đây)</h3>
+            <h3 className="text-sm font-bold text-slate-800">Traffic & DAU (30 ngày gần đây)</h3>
           </div>
           <p className="text-[11px] text-slate-400 mb-5">
-            Lượt xem trang (Page Views) hàng ngày được tính từ các hoạt động chuyển hướng trang.
+            Lượt xem trang và số user đã đăng nhập có hoạt động trong từng ngày.
           </p>
 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trafficTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={trafficAndUsersTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="pvGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#c9e8f8" stopOpacity={0.4} />
                     <stop offset="100%" stopColor="#c9e8f8" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="dauGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#34d399" stopOpacity={0.22} />
+                    <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -214,8 +248,13 @@ export default function AdminAnalyticsPanel() {
                 <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#fff', border: '1px solid #f1f5f9', borderRadius: 10, fontSize: 11 }}
+                  formatter={(value, name) => {
+                    if (name === 'Người dùng hoạt động') return [`${value} user`, 'Người dùng hoạt động'];
+                    return [`${value} lượt`, 'Lượt xem'];
+                  }}
                 />
                 <Area type="monotone" dataKey="pageViews" name="Lượt xem" stroke="#60a5fa" strokeWidth={2} fill="url(#pvGrad)" />
+                <Area type="monotone" dataKey="activeUsers" name="Người dùng hoạt động" stroke="#10b981" strokeWidth={2} fill="url(#dauGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

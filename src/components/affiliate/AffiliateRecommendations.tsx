@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import api from '../../lib/api';
@@ -17,7 +18,8 @@ interface AffiliateProduct {
   sourceName?: string;
 }
 
-const RECOMMENDATION_LIMIT = 3;
+const RECOMMENDATION_LIMIT = 8;
+const COMPACT_VISIBLE_COUNT = 4;
 
 function money(value?: number) {
   if (!value) return '';
@@ -44,6 +46,7 @@ export default function AffiliateRecommendations({
   phase?: string;
   compact?: boolean;
 }) {
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const productsQuery = useQuery({
     queryKey: ['affiliate-recommendations', symptomCategory, phase],
     queryFn: () => api.get('/affiliate-products/recommendations', {
@@ -69,6 +72,11 @@ export default function AffiliateRecommendations({
       return list.findIndex((item) => (item._id ?? item.affiliateUrl) === key) === index;
     })
     .slice(0, RECOMMENDATION_LIMIT);
+  const visibleProducts = useMemo(() => {
+    if (!compact) return products;
+    return products.slice(carouselIndex, carouselIndex + COMPACT_VISIBLE_COUNT);
+  }, [carouselIndex, compact, products]);
+  const canSlide = compact && products.length > COMPACT_VISIBLE_COUNT;
   const isLoading = productsQuery.isLoading || (recommendedProducts.length < RECOMMENDATION_LIMIT && fallbackProductsQuery.isLoading);
 
   if (isLoading || products.length === 0) return null;
@@ -90,14 +98,36 @@ export default function AffiliateRecommendations({
           Xem tất cả sản phẩm
         </Link>
       </div>
+      {canSlide && (
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setCarouselIndex((value) => Math.max(value - 1, 0))}
+            disabled={carouselIndex === 0}
+            className="grid size-10 place-items-center rounded-full border border-pink-100 bg-white text-pink-500 shadow-sm transition hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Sản phẩm trước"
+          >
+            <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCarouselIndex((value) => Math.min(value + 1, products.length - COMPACT_VISIBLE_COUNT))}
+            disabled={carouselIndex >= products.length - COMPACT_VISIBLE_COUNT}
+            className="grid size-10 place-items-center rounded-full border border-pink-100 bg-white text-pink-500 shadow-sm transition hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Sản phẩm sau"
+          >
+            <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+          </button>
+        </div>
+      )}
 
-      <div className={`mt-5 grid gap-4 ${compact ? 'sm:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
-        {products.map((product) => (
+      <div className={`mt-5 grid gap-4 ${compact ? 'sm:grid-cols-2 xl:grid-cols-4' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
+        {visibleProducts.map((product) => (
           <article key={product._id} className="overflow-hidden rounded-3xl border border-white/80 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
             {product.imageUrl ? (
-              <img src={product.imageUrl} alt={product.name} className="h-36 w-full object-cover" />
+              <img src={product.imageUrl} alt={product.name} loading="lazy" className={`${compact ? 'aspect-[5/3]' : 'aspect-[4/3]'} w-full object-cover`} />
             ) : (
-              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-pink-100 to-sky-100 text-pink-400">
+              <div className={`flex ${compact ? 'aspect-[5/3]' : 'aspect-[4/3]'} w-full items-center justify-center bg-gradient-to-br from-pink-100 to-sky-100 text-pink-400`}>
                 <span className="material-symbols-outlined text-5xl">local_mall</span>
               </div>
             )}
@@ -107,8 +137,8 @@ export default function AffiliateRecommendations({
                 {product.price ? <span className="text-xs font-black text-slate-600">{money(product.price)}</span> : null}
               </div>
               <h3 className="mt-3 line-clamp-2 text-base font-black text-slate-900">{bestProductName(product)}</h3>
-              {product.description && <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-500">{cleanProductTitle(product.description, 110)}</p>}
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              {!compact && product.description && <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-500">{cleanProductTitle(product.description, 110)}</p>}
+              <div className={`${compact ? 'mt-2' : 'mt-3'} flex flex-wrap gap-1.5`}>
                 {[...(product.symptomTags ?? []), ...(product.phaseTags ?? []), ...(product.goalTags ?? [])].slice(0, 4).map((tag) => (
                   <span key={tag} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">{tag}</span>
                 ))}

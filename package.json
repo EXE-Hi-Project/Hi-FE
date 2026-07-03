@@ -24,6 +24,7 @@
     "react-hook-form": "^7.48.2",
     "react-hot-toast": "^2.6.0",
     "react-is": "^19.2.4",
+    "react-qr-code": "^2.2.0",
     "react-router-dom": "^6.30.4",
     "recharts": "^3.8.0",
     "zod": "^3.22.4",

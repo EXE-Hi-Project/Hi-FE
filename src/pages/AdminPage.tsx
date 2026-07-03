@@ -9,6 +9,7 @@ import {
   Pulse,
   Question,
   Storefront,
+  Tag,
   Users,
   VideoCamera,
   X,
@@ -22,6 +23,7 @@ import AdminPanelSkeleton from '../components/admin/AdminPanelSkeleton';
 const AdminOverviewPanel = lazy(() => import('../components/admin/AdminOverviewPanel'));
 const AdminAnalyticsPanel = lazy(() => import('../components/admin/AdminAnalyticsPanel'));
 const AdminRevenuePanel = lazy(() => import('../components/admin/AdminRevenuePanel'));
+const AdminPricingPanel = lazy(() => import('../components/admin/AdminPricingPanel'));
 const AdminUsersPanel = lazy(() => import('../components/admin/AdminUsersPanel'));
 const HealthVideoAdminPanel = lazy(() => import('../components/admin/HealthVideoAdminPanel'));
 const AdminDailyQuestionsPanel = lazy(() => import('../components/admin/AdminDailyQuestionsPanel'));
@@ -33,6 +35,7 @@ const NAV_ITEMS = [
   { id: 'overview', label: 'Tổng quan', description: 'KPI và cảnh báo', Icon: ChartPieSlice },
   { id: 'analytics', label: 'Analytics', description: 'Traffic và chuyển đổi', Icon: Pulse },
   { id: 'revenue', label: 'Doanh thu', description: 'PayOS và dự phóng', Icon: CurrencyCircleDollar },
+  { id: 'pricing', label: 'Giá & Sale', description: 'Hi Pro và Hi Max', Icon: Tag },
   { id: 'users', label: 'Người dùng', description: 'Tài khoản và quyền', Icon: Users },
   { id: 'videos', label: 'Video sức khỏe', description: 'Nội dung đã duyệt', Icon: VideoCamera },
   { id: 'questions', label: 'Câu hỏi mỗi ngày', description: 'Kho câu hỏi cặp đôi', Icon: Question },
@@ -49,6 +52,8 @@ function ActivePanel({ tab }: { tab: AdminTab }) {
       return <AdminAnalyticsPanel />;
     case 'revenue':
       return <AdminRevenuePanel />;
+    case 'pricing':
+      return <AdminPricingPanel />;
     case 'users':
       return <AdminUsersPanel />;
     case 'videos':
@@ -110,7 +115,17 @@ export default function AdminPage() {
           <div className="flex items-center gap-3">
             <HiLogo size={36} />
             <div>
-              <p className="text-sm font-extrabold text-slate-950">Hi Admin</p>
+              <p
+                className="text-sm font-extrabold"
+                style={{
+                  background: 'linear-gradient(135deg, #7ecae8 0%, #c9a8e0 48%, #f9a8c9 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Hi Admin
+              </p>
               <p className="text-xs text-slate-500">Bảng vận hành nội bộ</p>
             </div>
           </div>
@@ -162,25 +177,16 @@ export default function AdminPage() {
       </aside>
 
       <div className="relative z-10 min-w-0 flex-1">
-        <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-7">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              aria-label="Mở điều hướng"
-              className="rounded-xl border border-slate-200 p-2 text-slate-600 lg:hidden"
-              onClick={() => setMobileNavOpen(true)}
-            >
-              <List size={20} />
-            </button>
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-extrabold tracking-tight text-slate-950">{activeItem.label}</h1>
-              <p className="truncate text-xs text-slate-500">{activeItem.description}</p>
-            </div>
-          </div>
-          <span className="hidden rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 sm:inline-flex">
-            Internal operations
-          </span>
-        </header>
+        {!mobileNavOpen && (
+          <button
+            type="button"
+            aria-label="Mở điều hướng"
+            className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg shadow-rose-500/30 transition-all hover:bg-rose-600 hover:scale-105 active:scale-95 lg:hidden"
+            onClick={() => setMobileNavOpen(true)}
+          >
+            <List size={24} />
+          </button>
+        )}
 
         <main className="mx-auto w-full max-w-[1500px] p-4 md:p-6 lg:p-8">
           <Suspense fallback={<AdminPanelSkeleton />}>

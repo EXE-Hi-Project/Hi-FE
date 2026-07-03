@@ -15,7 +15,7 @@ export const PREMIUM_PLAN_FEATURES = [
 ] as const;
 
 export const PREMIUM_YEARLY_FEATURES = [
-  'Toàn bộ quyền lợi Premium',
+  'Toàn bộ quyền lợi Hi Pro',
   'Thời hạn sử dụng 365 ngày',
   'Tiết kiệm 32% so với gói tháng',
 ] as const;

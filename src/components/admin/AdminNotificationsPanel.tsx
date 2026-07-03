@@ -30,7 +30,7 @@ export default function AdminNotificationsPanel() {
       const results = await Promise.all(targets.map((item) =>
         api.get('/admin/notifications/audience-count', { params: { target: item } }).then(({ data }) => data.data as { target: Audience; count: number })
       ));
-      const labels: Record<Audience, string> = { all: 'Tất cả', female: 'Nữ', male: 'Nam', premium: 'Premium' };
+      const labels: Record<Audience, string> = { all: 'Tất cả', female: 'Nữ', male: 'Nam', premium: 'Hi Pro/Max' };
       const colors: Record<Audience, string> = { all: '#64748b', female: '#eb477e', male: '#3b82f6', premium: '#8b5cf6' };
       return results.map((item) => ({ label: labels[item.target], count: item.count, color: colors[item.target] }));
     },
@@ -82,7 +82,7 @@ export default function AdminNotificationsPanel() {
               <option value="all">Tất cả người dùng</option>
               <option value="female">Người dùng nữ</option>
               <option value="male">Người dùng nam</option>
-              <option value="premium">Tài khoản Premium</option>
+              <option value="premium">Tài khoản Hi Pro / Hi Max</option>
             </select>
           </label>
           <Input label="Tiêu đề" maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} />

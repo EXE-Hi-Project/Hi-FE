@@ -97,7 +97,7 @@ export function useCancelSubscription() {
   return useMutation({
     mutationFn: () => api.post('/payments/cancel').then((r) => r.data),
     onSuccess: (data) => {
-      toast.success(data.message || 'Đã hủy gia hạn gói Premium');
+      toast.success(data.message || 'Đã dừng gia hạn gói Hi');
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
       queryClient.invalidateQueries({ queryKey: ['paymentHistory'] });
     },
