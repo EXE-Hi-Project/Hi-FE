@@ -59,6 +59,9 @@ export interface PartnerSharingPreferences {
 export interface PartnerExperiencePreferences {
   dailyQuestionsEnabled?: boolean;
   contextualCareSuggestionsEnabled?: boolean;
+  coupleQuestionAnswerEmailEnabled?: boolean;
+  coupleQuestionCommentEmailEnabled?: boolean;
+  coupleQuestionEditEmailEnabled?: boolean;
 }
 
 export interface UserSubscription {

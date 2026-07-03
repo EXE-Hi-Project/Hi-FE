@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '../components/layout/Navbar';
@@ -17,13 +17,12 @@ import type { CycleInsights, CycleRecord, CoupleAnniversarySummary } from '../ty
 import { normalizeAnniversarySummary } from '../utils/coupleAnniversaryCalendar';
 import WeatherForecast from '../components/ui/WeatherForecast';
 
+const SaleBanner = lazy(() => import('../components/subscription/SaleBanner'));
+const PartnerCycleReportChart = lazy(() => import('../components/cycles/PartnerCycleReportChart'));
+
 function formatShortDate(value?: string | null) {
   if (!value) return '--';
   return new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-}
-
-function formatDateRange(start?: string | null, end?: string | null) {
-  return `${formatShortDate(start)}${end ? ` - ${formatShortDate(end)}` : ''}`;
 }
 
 function moodLabel(score?: number | null) {
@@ -85,6 +84,7 @@ interface PartnerCyclesResponse {
   sharing?: {
     shareCycleData: boolean;
     shareMood: boolean;
+    shareDetailedSymptoms?: boolean;
   };
   cycles: CycleRecord[];
   history?: {
@@ -106,15 +106,14 @@ interface PartnerCyclesResponse {
 
 export default function MaleDashboardPage() {
   const { user } = useAuthStore();
-  const [historyLimit, setHistoryLimit] = useState(8);
   const [trustOpen, setTrustOpen] = useState(false);
   const greeting = getGreeting();
   const firstName = user?.name?.split(' ').pop() ?? 'bạn';
 
   const partnerQuery = useQuery<PartnerCyclesResponse>({
-    queryKey: ['partner-cycles', historyLimit],
+    queryKey: ['partner-cycles'],
     queryFn: async () => {
-      const { data } = await api.get('/users/partner-cycles', { params: { historyPage: 0, historyLimit } });
+      const { data } = await api.get('/users/partner-cycles', { params: { historyPage: 0, historyLimit: 12 } });
       return data;
     },
     enabled: !!user,
@@ -132,11 +131,11 @@ export default function MaleDashboardPage() {
   const partner = partnerQuery.data?.partner;
   const hasPartner = Boolean(partner || user.partnerId);
   const cycles = partnerQuery.data?.cycles ?? [];
-  const history = partnerQuery.data?.history?.items ?? cycles.slice(0, historyLimit);
-  const historyHasMore = Boolean(partnerQuery.data?.history?.hasMore);
+  const history = partnerQuery.data?.history?.items ?? cycles;
   const historyTotal = partnerQuery.data?.history?.total ?? history.length;
   const insights = partnerQuery.data?.insights ?? null;
   const cycleDataShared = partnerQuery.data?.sharing?.shareCycleData !== false;
+  const shareDetailedSymptoms = partnerQuery.data?.sharing?.shareDetailedSymptoms === true;
   const ring = ringCopy(insights);
   const circumference = 2 * Math.PI * 44;
   const partnerName = partner?.name ?? 'Người ấy';
@@ -160,24 +159,19 @@ export default function MaleDashboardPage() {
                 <span className="material-symbols-outlined text-[20px] text-yellow-500">{greeting.icon}</span>
                 <span>{greeting.text}</span>
               </div>
-              <h1 className="hi-page-title text-4xl md:text-5xl">
+              <h1 className="hi-page-title text-4xl md:text-[44px] md:leading-[1.08]">
                 Chào {firstName}, cùng chăm sóc dịu dàng hôm nay.
               </h1>
               <p className="mt-3 max-w-2xl text-base font-medium text-slate-500">
                 Dashboard nam chỉ xem dữ liệu chu kỳ đã được Người ấy chia sẻ, kèm gợi ý chăm sóc và Hi AI.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <WeatherForecast />
-              <button
-                type="button"
-                onClick={() => openHiChat('Hôm nay tôi nên chăm sóc Người ấy thế nào?')}
-                className="hi-btn-primary inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-black whitespace-nowrap"
-              >
-                Hỏi Hi AI
-              </button>
+            <div className="w-full max-w-lg md:w-auto">
+              <WeatherForecast compact />
             </div>
           </div>
+
+          <Suspense fallback={null}><SaleBanner /></Suspense>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <section className="md:col-span-3 rounded-[2rem] border border-blue-100 bg-white/95 p-6 shadow-lg shadow-blue-100/40 backdrop-blur-xl">
@@ -187,7 +181,7 @@ export default function MaleDashboardPage() {
                     <span className="material-symbols-outlined text-[22px]">favorite</span>
                     Sức khỏe của {partnerName}
                   </p>
-                  <h2 className="mt-1 text-2xl font-black text-slate-900">Trạng thái chu kỳ</h2>
+                  <h2 className="mt-1 text-2xl font-black text-slate-900">Chu kỳ của Người ấy</h2>
                   <p className="mt-1 text-sm font-semibold text-slate-400">Dữ liệu đồng bộ từ Người ấy, chỉ xem.</p>
                 </div>
                 <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-black text-blue-600">
@@ -242,7 +236,7 @@ export default function MaleDashboardPage() {
                     </div>
 
                     <div>
-                      <CyclePreviewCalendar cycles={cycles} insights={insights} />
+                      <CyclePreviewCalendar cycles={cycles} insights={insights} shareDetailedSymptoms={shareDetailedSymptoms} />
                       <div className="mt-4 flex flex-wrap gap-2">
                         <span className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-500 shadow-sm">
                           {Math.round(insights?.averagePeriodLength ?? cycles[0]?.periodLength ?? 5)} ngày kinh trung bình
@@ -293,7 +287,7 @@ export default function MaleDashboardPage() {
                         <span className="material-symbols-outlined text-sm">favorite</span>
                         {anniversaries.startDate?.title || 'Đồng hành'}{' '}
                         <span
-                          className="text-sm font-black px-0.5"
+                          className="px-0.5 text-2xl font-black leading-none"
                           style={{
                             background: 'linear-gradient(135deg, #7ecae8 0%, #c9a8e0 48%, #f9a8c9 100%)',
                             WebkitBackgroundClip: 'text',
@@ -334,48 +328,6 @@ export default function MaleDashboardPage() {
 
           {hasPartner && cycleDataShared && (
             <section className="mt-6 rounded-[2rem] border border-blue-100 bg-white/95 p-6 shadow-lg shadow-blue-100/40 backdrop-blur-xl">
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-sm font-black text-blue-500">Lịch sử chu kỳ của Người ấy</p>
-                  <h2 className="mt-1 text-2xl font-black text-slate-900">Các kỳ đã ghi nhận</h2>
-                  <p className="mt-1 text-sm font-semibold text-slate-400">
-                    Chỉ hiển thị kỳ thật đã xác nhận. Dự đoán và trễ không được ghi thành lịch sử.
-                  </p>
-                </div>
-                <span className="rounded-full bg-slate-50 px-4 py-2 text-xs font-black text-slate-500">{historyTotal} kỳ</span>
-              </div>
-              {history.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm font-semibold text-slate-500">
-                  Người ấy chưa có lịch sử chu kỳ đã xác nhận.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  {history.map((record) => (
-                    <div key={record._id} className="rounded-3xl border border-rose-100/70 bg-gradient-to-br from-white to-rose-50/60 p-4 shadow-sm">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-400">Đã ghi nhận</p>
-                      <p className="mt-2 text-lg font-black text-slate-900">{formatDateRange(record.startDate, record.endDate)}</p>
-                      <div className="mt-3 flex gap-2">
-                        <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-slate-500">{record.periodLength ?? 5} ngày kinh</span>
-                        <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-slate-500">{record.cycleLength ?? 28} ngày chu kỳ</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {historyHasMore && (
-                <button
-                  type="button"
-                  onClick={() => setHistoryLimit((value) => value + 8)}
-                  className="mt-5 rounded-full border border-blue-100 bg-white px-5 py-3 text-sm font-black text-blue-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-blue-50"
-                >
-                  Tải thêm lịch sử
-                </button>
-              )}
-            </section>
-          )}
-
-          {hasPartner && cycleDataShared && (
-            <section className="mt-6 rounded-[2rem] border border-blue-100 bg-white/95 p-6 shadow-lg shadow-blue-100/40 backdrop-blur-xl">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="text-sm font-black uppercase tracking-[0.2em] text-blue-500">Báo cáo của Người ấy</p>
@@ -398,32 +350,23 @@ export default function MaleDashboardPage() {
                     compact
                     accent="blue"
                     title="Mở phân tích chuyên sâu của Người ấy"
-                    description="Khi một trong hai có Premium, cả hai xem được điểm ổn định, độ tin cậy và xu hướng chu kỳ. Trạng thái chu kỳ tổng quan và cảm xúc được chia sẻ vẫn miễn phí."
+                    description="Khi một trong hai có Hi Pro hoặc Hi Max, cả hai xem được điểm ổn định, độ tin cậy và xu hướng chu kỳ."
                   />
                 </div>
               )}
-              <div className="mt-5 grid gap-3 md:grid-cols-4">
-                {insights?.advancedAnalyticsAvailable && (
-                  <>
-                    <div className="rounded-3xl bg-gradient-to-br from-blue-50 to-white p-4">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">Tính đều đặn</p>
-                      <p className="mt-2 text-3xl font-black text-slate-900">{insights.regularityScore ?? 0}%</p>
-                    </div>
-                    <div className="rounded-3xl bg-gradient-to-br from-sky-50 to-white p-4">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-sky-500">Độ tin cậy</p>
-                      <p className="mt-2 text-xl font-black text-slate-900">{confidenceLabel}</p>
-                    </div>
-                  </>
-                )}
-                <div className="rounded-3xl bg-gradient-to-br from-violet-50 to-white p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-violet-500">Cảm xúc chia sẻ</p>
-                  <p className="mt-2 text-xl font-black text-slate-900">{latestMood}</p>
+              {insights?.advancedAnalyticsAvailable && history.length > 0 ? (
+                <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_300px]">
+                  <Suspense fallback={<div className="h-72 animate-pulse rounded-2xl bg-slate-50" />}>
+                    <PartnerCycleReportChart cycles={history} />
+                  </Suspense>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                    <div className="rounded-2xl bg-blue-50 p-4"><p className="text-xs font-bold text-blue-600">Tính đều đặn</p><p className="mt-2 text-3xl font-black text-slate-900">{insights.regularityScore ?? 0}%</p></div>
+                    <div className="rounded-2xl bg-sky-50 p-4"><p className="text-xs font-bold text-sky-600">Độ tin cậy</p><p className="mt-2 text-xl font-black text-slate-900">{confidenceLabel}</p></div>
+                    <div className="rounded-2xl bg-violet-50 p-4"><p className="text-xs font-bold text-violet-600">Cảm xúc chia sẻ</p><p className="mt-2 text-lg font-black text-slate-900">{latestMood}</p></div>
+                    <div className="rounded-2xl bg-rose-50 p-4"><p className="text-xs font-bold text-rose-600">Lịch sử đã ghi</p><p className="mt-2 text-3xl font-black text-slate-900">{historyTotal}</p></div>
+                  </div>
                 </div>
-                <div className="rounded-3xl bg-gradient-to-br from-pink-50 to-white p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-pink-500">Lịch sử đã ghi</p>
-                  <p className="mt-2 text-3xl font-black text-slate-900">{historyTotal}</p>
-                </div>
-              </div>
+              ) : null}
             </section>
           )}
 

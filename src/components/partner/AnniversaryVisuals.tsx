@@ -45,40 +45,6 @@ const STICKERS = {
   key,
 };
 
-export const ANNIVERSARY_STICKERS = Object.keys(STICKERS);
-
-export const ANNIVERSARY_STICKER_LABELS: Record<string, string> = {
-  heart: 'Trái tim',
-  ring: 'Nhẫn đôi',
-  flower: 'Hoa nở',
-  moon: 'Trăng đêm',
-  sparkles: 'Lấp lánh',
-  ribbon: 'Trái tim nơ',
-  beer: 'Cụng ly',
-  airplane: 'Chuyến đi',
-  movie: 'Điện ảnh',
-  gift: 'Quà tặng',
-  camera: 'Khoảnh khắc',
-  teddy: 'Gấu bông',
-  house: 'Tổ ấm',
-  key: 'Chìa khóa',
-};
-
-export const ANNIVERSARY_SYMBOL_LABELS: Record<string, string> = {
-  favorite: 'Trái tim',
-  celebration: 'Chúc mừng',
-  cake: 'Bánh sinh nhật',
-  local_florist: 'Hoa',
-  photo_camera: 'Máy ảnh',
-  star: 'Ngôi sao',
-  flight: 'Máy bay',
-  restaurant: 'Bữa ăn',
-  movie: 'Điện ảnh',
-  home: 'Tổ ấm',
-  pets: 'Thú cưng',
-  wine_bar: 'Ly rượu',
-};
-
 interface AnniversaryVisualProps {
   name?: string;
   className?: string;

@@ -102,6 +102,7 @@ export type AdminTab =
   | 'overview'
   | 'analytics'
   | 'revenue'
+  | 'pricing'
   | 'users'
   | 'videos'
   | 'questions'

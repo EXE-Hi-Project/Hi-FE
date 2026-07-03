@@ -16,16 +16,16 @@ function getPlanMeta(subscription?: SubscriptionLike | null) {
   const active = subscription?.status === 'active';
   if (active && plan.includes('yearly')) {
     return {
-      label: 'PREMIUM NĂM',
-      sublabel: 'Tiết kiệm',
-      className: 'bg-[linear-gradient(135deg,#fb7185,#d8b4fe,#fbbf24)] text-white shadow-[0_10px_26px_rgba(244,114,182,0.24)]',
+      label: 'HI MAX',
+      sublabel: '365 ngày',
+      className: 'border border-sky-200 bg-sky-50 text-sky-700 shadow-sm',
     };
   }
   if (active && (plan.includes('monthly') || plan === 'premium')) {
     return {
-      label: 'PREMIUM THÁNG',
-      sublabel: 'Đang mở khóa',
-      className: 'bg-[linear-gradient(135deg,#fb7185,#ec4899,#c084fc)] text-white shadow-[0_10px_26px_rgba(236,72,153,0.24)]',
+      label: 'HI PRO',
+      sublabel: '30 ngày',
+      className: 'border border-rose-200 bg-rose-50 text-rose-700 shadow-sm',
     };
   }
   return {
@@ -40,7 +40,7 @@ export default function PlanStatusPill({ subscription, compact = false, classNam
   return (
     <span
       className={clsx(
-        'inline-flex items-center rounded-full font-black uppercase tracking-wide transition-all duration-300 hover:-translate-y-0.5',
+        'inline-flex items-center rounded-full font-black uppercase tracking-wide transition-colors duration-200',
         compact ? 'px-2.5 py-1 text-[10px]' : 'gap-2 px-3.5 py-2 text-[11px]',
         meta.className,
         className,
@@ -48,7 +48,7 @@ export default function PlanStatusPill({ subscription, compact = false, classNam
     >
       <span>{meta.label}</span>
       {!compact && (
-        <span className="rounded-full bg-white/25 px-2 py-0.5 text-[9px] font-extrabold normal-case tracking-normal text-current">
+        <span className="rounded-full bg-white/70 px-2 py-0.5 text-[9px] font-extrabold normal-case tracking-normal text-current">
           {meta.sublabel}
         </span>
       )}

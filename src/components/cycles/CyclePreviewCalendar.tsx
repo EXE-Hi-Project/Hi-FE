@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../lib/api';
+import { useSubscription } from '../../hooks/useSubscription';
 import { useAuthStore } from '../../store/authStore';
-import type { CycleInsights, CycleRecord, CoupleAnniversarySummary, CoupleAnniversaryColor, DailyLog } from '../../types/shared';
+import type { CycleInsights, CycleRecord, CoupleAnniversarySummary, CoupleAnniversaryColor, DailyLog, CoupleQuestionHistory, CoupleQuestionSession } from '../../types/shared';
 import {
   CYCLE_DAY_CLASSES,
   CYCLE_LEGEND,
@@ -34,12 +35,6 @@ const FLOW_LABELS: Record<string, string> = {
   HEAVY: 'Lượng kinh nhiều',
 };
 
-const SEVERITY_LABELS: Record<string, string> = {
-  MILD: 'Nhẹ',
-  MODERATE: 'Vừa',
-  SEVERE: 'Nặng',
-};
-
 const ANNIVERSARY_BORDER_CLASSES: Record<CoupleAnniversaryColor, string> = {
   pink: 'border-pink-500 border-2 border-solid shadow-[0_0_8px_rgba(244,114,182,0.4)]',
   rose: 'border-rose-500 border-2 border-solid shadow-[0_0_8px_rgba(244,63,94,0.4)]',
@@ -53,15 +48,23 @@ interface CyclePreviewCalendarProps {
   cycles: CycleRecord[];
   insights?: CycleInsights | null;
   className?: string;
+  shareDetailedSymptoms?: boolean;
 }
 
 function monthLabel(date: Date) {
   return date.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
 }
 
-export default function CyclePreviewCalendar({ cycles, insights, className = '' }: CyclePreviewCalendarProps) {
+function wasAnswerEdited(answer?: { answeredAt?: string; updatedAt?: string } | null) {
+  if (!answer?.answeredAt || !answer.updatedAt) return false;
+  return new Date(answer.updatedAt).getTime() > new Date(answer.answeredAt).getTime();
+}
+
+export default function CyclePreviewCalendar({ cycles, insights, className = '', shareDetailedSymptoms = true }: CyclePreviewCalendarProps) {
   const { user } = useAuthStore();
+  const { data: subscription } = useSubscription();
   const hasPartner = !!user?.partnerId;
+  const hasCouplePremium = subscription?.couplePremium === true;
   const [weeksOffset, setWeeksOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -69,40 +72,148 @@ export default function CyclePreviewCalendar({ cycles, insights, className = '' 
     queryKey: ['partner-anniversaries'],
     queryFn: () => api.get('/partner/anniversaries').then(({ data }) => data.anniversaries),
     enabled: hasPartner,
+    staleTime: 5 * 60 * 1000,
   });
   const anniversaries = anniversariesQuery.data;
 
   const baseAnchor = getCalendarAnchor(insights, cycles);
-  const anchor = new Date(baseAnchor.getFullYear(), baseAnchor.getMonth(), baseAnchor.getDate() + weeksOffset * 7);
-  const days = getCalendarRange(anchor, 3);
-  const rangeFrom = toIsoDate(days[0]);
-  const rangeTo = toIsoDate(days[days.length - 1]);
-  const todayIso = toIsoDate(new Date());
+  const anchor = useMemo(() => {
+    return new Date(baseAnchor.getFullYear(), baseAnchor.getMonth(), baseAnchor.getDate() + weeksOffset * 7);
+  }, [baseAnchor, weeksOffset]);
+
+  const days = useMemo(() => getCalendarRange(anchor, 3), [anchor]);
+  const rangeFrom = useMemo(() => toIsoDate(days[0]), [days]);
+  const rangeTo = useMemo(() => toIsoDate(days[days.length - 1]), [days]);
+  const todayIso = useMemo(() => toIsoDate(new Date()), []);
 
   const dailyLogsQuery = useQuery<DailyLog[]>({
-    queryKey: ['daily-logs', rangeFrom, rangeTo],
-    queryFn: () => api.get('/daily-logs', { params: { from: rangeFrom, to: rangeTo } })
-      .then(({ data }) => data.dailyLogs ?? []),
-    enabled: user?.gender === 'female',
+    queryKey: [user?.gender === 'female' ? 'daily-logs' : 'partner-daily-logs', rangeFrom, rangeTo],
+    queryFn: () => {
+      const url = user?.gender === 'female' ? '/daily-logs' : '/daily-logs/partner';
+      return api.get(url, { params: { from: rangeFrom, to: rangeTo } })
+        .then(({ data }) => data.dailyLogs ?? []);
+    },
+    enabled: !!user && (user.gender === 'female' || (user.gender === 'male' && !!user.partnerId && shareDetailedSymptoms)),
+    staleTime: 60_000,
   });
+
   const dailyLogsByDate = useMemo(
     () => new Map((dailyLogsQuery.data ?? []).map((log) => [log.logDate.slice(0, 10), log])),
     [dailyLogsQuery.data],
   );
-  const monthCounts = days.reduce((acc, date) => {
-    const label = monthLabel(date);
-    acc[label] = (acc[label] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const shownMonths = Object.keys(monthCounts).reduce((a, b) =>
-    monthCounts[a] >= monthCounts[b] ? a : b
-  );
-  const selectedDay = selectedDate ? days.find((day) => toIsoDate(day) === selectedDate) : undefined;
-  const selectedLog = selectedDate ? dailyLogsByDate.get(selectedDate) : undefined;
-  const selectedKind = selectedDay ? getCycleDayKind(selectedDay, cycles, insights) : null;
-  const selectedAnniversaries = selectedDay
-    ? getDayAnniversaryOccurrences(anniversaries, selectedDate!, selectedDay.getFullYear(), selectedDay.getMonth())
-    : [];
+
+  const questionsQuery = useQuery<CoupleQuestionHistory>({
+    queryKey: ['couple-questions-range', rangeFrom, rangeTo],
+    queryFn: () => api.get('/partner/questions/history', {
+      params: { from: rangeFrom, to: rangeTo, page: 0, limit: 62 }
+    }).then(({ data }) => data.history),
+    enabled: hasPartner && hasCouplePremium,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const questionMap = useMemo(() => {
+    const map = new Map<string, CoupleQuestionSession>();
+    if (questionsQuery.data?.items) {
+      questionsQuery.data.items.forEach((item) => {
+        if (item.questionDate) {
+          const dateStr = item.questionDate.slice(0, 10);
+          map.set(dateStr, item);
+        }
+      });
+    }
+    return map;
+  }, [questionsQuery.data]);
+
+  const daysData = useMemo(() => {
+    return days.map((date) => {
+      const iso = toIsoDate(date);
+      const kind = getCycleDayKind(date, cycles, insights);
+      const isToday = iso === todayIso;
+      const occurrences = getDayAnniversaryOccurrences(anniversaries, iso, date.getFullYear(), date.getMonth());
+      const primary = occurrences[0];
+      const event = primary?.event;
+      const decorated = Boolean(primary && event);
+      const dailyLog = dailyLogsByDate.get(iso);
+      const symptomNames = dailyLog?.symptoms
+        ?.map((symptom) => symptom.symptomName)
+        .filter((name): name is string => Boolean(name)) ?? [];
+      const question = questionMap.get(iso);
+      const hasDetails = Boolean(kind || dailyLog || occurrences.length > 0 || question);
+      const dayOfWeek = date.getDay();
+      const tooltipPosition = dayOfWeek === 0 || dayOfWeek === 6
+        ? 'right-0'
+        : dayOfWeek === 1 || dayOfWeek === 2
+          ? 'left-0'
+          : 'left-1/2 -translate-x-1/2';
+
+      let cellClass = '';
+      if (kind) {
+        if (decorated) {
+          if (kind === 'recorded') {
+            cellClass = 'bg-rose-200 text-rose-800';
+          } else if (kind === 'predicted') {
+            cellClass = 'bg-white text-rose-500';
+          } else if (kind === 'fertile') {
+            cellClass = 'bg-sky-50 text-sky-700';
+          } else if (kind === 'ovulation') {
+            cellClass = 'bg-sky-200 text-sky-900';
+          } else if (kind === 'delayed') {
+            cellClass = 'bg-slate-100 text-slate-500';
+          }
+        } else {
+          cellClass = kind === 'predicted' ? CYCLE_DAY_CLASSES[kind] : `${CYCLE_DAY_CLASSES[kind]} border-transparent`;
+        }
+      } else {
+        if (decorated) {
+          cellClass = 'bg-slate-50/80 text-slate-500';
+        } else {
+          cellClass = 'border-slate-50/50 bg-slate-50/80 text-slate-500';
+        }
+      }
+
+      const borderClass = decorated
+        ? `${ANNIVERSARY_BORDER_CLASSES[event.color ?? 'pink']} ${anniversaryEffectClass(event.effect)}`
+        : '';
+
+      return {
+        date,
+        iso,
+        kind,
+        isToday,
+        occurrences,
+        event,
+        decorated,
+        dailyLog,
+        symptomNames,
+        question,
+        hasDetails,
+        tooltipPosition,
+        cellClass,
+        borderClass
+      };
+    });
+  }, [days, cycles, insights, anniversaries, dailyLogsByDate, questionMap, todayIso]);
+
+  const monthCounts = useMemo(() => {
+    return days.reduce((acc, date) => {
+      const label = monthLabel(date);
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [days]);
+
+  const shownMonths = useMemo(() => {
+    const keys = Object.keys(monthCounts);
+    if (keys.length === 0) return '';
+    return keys.reduce((a, b) =>
+      monthCounts[a] >= monthCounts[b] ? a : b
+    );
+  }, [monthCounts]);
+
+  const selectedDayData = useMemo(() => {
+    if (!selectedDate) return null;
+    return daysData.find((d) => d.iso === selectedDate);
+  }, [daysData, selectedDate]);
 
   const moveWeeks = (amount: number) => {
     setWeeksOffset((current) => current + amount);
@@ -150,56 +261,23 @@ export default function CyclePreviewCalendar({ cycles, insights, className = '' 
               {day}
             </div>
           ))}
-          {days.map((date) => {
-            const iso = toIsoDate(date);
-            const kind = getCycleDayKind(date, cycles, insights);
-            const isToday = iso === todayIso;
-
-            // Anniversary check
-            const occurrences = getDayAnniversaryOccurrences(anniversaries, iso, date.getFullYear(), date.getMonth());
-            const primary = occurrences[0];
-            const event = primary?.event;
-            const decorated = Boolean(primary && event);
-            const dailyLog = dailyLogsByDate.get(iso);
-            const symptomNames = dailyLog?.symptoms
-              ?.map((symptom) => symptom.symptomName)
-              .filter((name): name is string => Boolean(name)) ?? [];
-            const hasDetails = Boolean(kind || dailyLog || occurrences.length > 0);
-            const dayOfWeek = date.getDay();
-            const tooltipPosition = dayOfWeek === 0 || dayOfWeek === 6
-              ? 'right-0'
-              : dayOfWeek === 1 || dayOfWeek === 2
-                ? 'left-0'
-                : 'left-1/2 -translate-x-1/2';
-
-            let cellClass = '';
-            if (kind) {
-              if (decorated) {
-                if (kind === 'recorded') {
-                  cellClass = 'bg-rose-200 text-rose-800';
-                } else if (kind === 'predicted') {
-                  cellClass = 'bg-white text-rose-500';
-                } else if (kind === 'fertile') {
-                  cellClass = 'bg-sky-50 text-sky-700';
-                } else if (kind === 'ovulation') {
-                  cellClass = 'bg-sky-200 text-sky-900';
-                } else if (kind === 'delayed') {
-                  cellClass = 'bg-slate-100 text-slate-500';
-                }
-              } else {
-                cellClass = kind === 'predicted' ? CYCLE_DAY_CLASSES[kind] : `${CYCLE_DAY_CLASSES[kind]} border-transparent`;
-              }
-            } else {
-              if (decorated) {
-                cellClass = 'bg-slate-50/80 text-slate-500';
-              } else {
-                cellClass = 'border-slate-50/50 bg-slate-50/80 text-slate-500';
-              }
-            }
-
-            const borderClass = decorated
-              ? `${ANNIVERSARY_BORDER_CLASSES[event.color ?? 'pink']} ${anniversaryEffectClass(event.effect)}`
-              : '';
+          {daysData.map((day) => {
+            const {
+              date,
+              iso,
+              kind,
+              isToday,
+              occurrences,
+              event,
+              decorated,
+              dailyLog,
+              symptomNames,
+              question,
+              hasDetails,
+              tooltipPosition,
+              cellClass,
+              borderClass
+            } = day;
 
             return (
               <button
@@ -209,7 +287,7 @@ export default function CyclePreviewCalendar({ cycles, insights, className = '' 
                 aria-pressed={selectedDate === iso}
                 aria-label={`Xem chi tiết ngày ${date.toLocaleDateString('vi-VN')}`}
                 className={[
-                  'group relative flex aspect-square min-h-[32px] items-center justify-center rounded-xl border text-xs font-extrabold transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] sm:aspect-[1.25] sm:min-h-9 sm:rounded-2xl sm:text-sm',
+                  'group relative flex aspect-square min-h-[40px] items-center justify-center rounded-xl border text-xs font-extrabold transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] sm:aspect-[1.25] sm:min-h-10 sm:rounded-2xl sm:text-sm',
                   cellClass,
                   borderClass,
                   isToday ? 'outline outline-2 outline-slate-800 outline-offset-2' : '',
@@ -222,6 +300,19 @@ export default function CyclePreviewCalendar({ cycles, insights, className = '' 
                     <AnniversarySticker name={event.sticker} size={16} />
                   </span>
                 )}
+
+                {/* Question status indicator dot */}
+                {question && (
+                  <span className="absolute bottom-1 flex gap-0.5 justify-center">
+                    <span className={[
+                      "h-1.5 w-1.5 rounded-full",
+                      question.status === 'UNANSWERED' ? 'bg-slate-400' : '',
+                      question.status === 'WAITING_PARTNER' ? 'bg-amber-400 animate-pulse' : '',
+                      question.status === 'UNLOCKED' ? 'bg-emerald-500' : '',
+                    ].join(' ')} />
+                  </span>
+                )}
+
                 {hasDetails && (
                   <span className={`pointer-events-none absolute bottom-[calc(100%+8px)] z-40 hidden w-60 rounded-xl border border-slate-200 bg-white p-3 text-left font-normal text-slate-600 shadow-xl opacity-0 transition group-hover:opacity-100 sm:block ${tooltipPosition}`}>
                     <strong className="block text-xs font-extrabold text-slate-900">
@@ -245,6 +336,20 @@ export default function CyclePreviewCalendar({ cycles, insights, className = '' 
                         </span>
                       </span>
                     ))}
+                    {question && (
+                      <span className="mt-2 flex flex-col gap-0.5 border-t border-slate-100 pt-2">
+                        <strong className="block text-[11px] font-extrabold text-slate-800">Câu hỏi cặp đôi</strong>
+                        <span className="truncate block text-[10px] text-slate-500 italic">“{question.questionText}”</span>
+                        <span className="flex items-center gap-1.5 mt-0.5 text-[10px] font-bold">
+                          {question.status === 'UNANSWERED' && <span className="text-slate-400">• Chưa trả lời</span>}
+                          {question.status === 'WAITING_PARTNER' && <span className="text-amber-500">• Chờ Người ấy</span>}
+                          {question.status === 'UNLOCKED' && <span className="text-emerald-500">• Đã mở</span>}
+                          {wasAnswerEdited(question.myAnswer) && (
+                            <span className="text-sky-500 font-normal ml-1">(Đã chỉnh sửa)</span>
+                          )}
+                        </span>
+                      </span>
+                    )}
                   </span>
                 )}
               </button>
@@ -263,90 +368,117 @@ export default function CyclePreviewCalendar({ cycles, insights, className = '' 
         </button>
       </div>
 
-      {selectedDay && selectedDate && (
-        <section className="mt-4 rounded-2xl border border-rose-100 bg-rose-50/50 p-4" aria-live="polite">
-          <div className="flex flex-wrap items-start justify-between gap-2">
+      {selectedDayData && (
+        <section className="mt-4 rounded-2xl border border-rose-100 bg-rose-50/50 p-5 space-y-4" aria-live="polite">
+          {/* Header */}
+          <div className="flex flex-wrap items-start justify-between gap-2 border-b border-rose-100/50 pb-3">
             <div>
               <p className="text-sm font-extrabold capitalize text-slate-900">
-                {selectedDay.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                {selectedDayData.date.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
               </p>
               <p className="mt-1 text-xs font-semibold text-slate-500">
-                {selectedKind ? CYCLE_KIND_LABELS[selectedKind] ?? 'Theo dõi chu kỳ' : 'Ngoài các mốc dự đoán chu kỳ'}
+                {selectedDayData.kind ? CYCLE_KIND_LABELS[selectedDayData.kind] ?? 'Theo dõi chu kỳ' : 'Ngoài các mốc dự đoán chu kỳ'}
               </p>
             </div>
-            {selectedLog?.flowIntensity && selectedLog.flowIntensity !== 'NONE' && (
-              <span className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-rose-600 shadow-sm">
-                {FLOW_LABELS[selectedLog.flowIntensity]}
+            {selectedDayData.dailyLog?.flowIntensity && selectedDayData.dailyLog.flowIntensity !== 'NONE' && (
+              <span className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-rose-600 shadow-sm border border-rose-100">
+                {FLOW_LABELS[selectedDayData.dailyLog.flowIntensity]}
               </span>
             )}
           </div>
 
-          {selectedLog ? (
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-white bg-white/80 p-3">
-                <p className="text-[11px] font-extrabold uppercase text-slate-400">Triệu chứng đã ghi</p>
-                {selectedLog.symptoms?.length ? (
+          {/* Unified Details Layout */}
+          <div className="space-y-4">
+            {/* Symptoms */}
+            {(user?.gender === 'female' || shareDetailedSymptoms) && (
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Triệu chứng</p>
+                {selectedDayData.dailyLog?.symptoms?.length ? (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedLog.symptoms.map((symptom) => (
-                      <span key={symptom._id} className="rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700">
+                    {selectedDayData.dailyLog.symptoms.map((symptom) => (
+                      <span key={symptom._id} className="rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 border border-rose-100/30">
                         {symptom.symptomName || `Triệu chứng #${symptom.symptomId}`}
-                        <span className="ml-1 font-semibold text-rose-400">{SEVERITY_LABELS[symptom.severity] ?? symptom.severity}</span>
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-2 text-xs font-medium text-slate-500">Không ghi nhận triệu chứng.</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-400">Không ghi nhận triệu chứng.</p>
                 )}
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
-                  {selectedLog.hasClots && <span>Có cục máu đông</span>}
-                  {selectedLog.moodScore && <span>Tâm trạng: {selectedLog.moodScore}/5</span>}
-                </div>
-                {selectedLog.notes && <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-slate-600">{selectedLog.notes}</p>}
+                {selectedDayData.dailyLog?.notes && (
+                  <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-slate-600 bg-white/55 p-2.5 rounded-xl border border-white">
+                    {selectedDayData.dailyLog.notes}
+                  </p>
+                )}
               </div>
+            )}
 
-              <div className="rounded-xl border border-white bg-white/80 p-3">
-                <p className="text-[11px] font-extrabold uppercase text-slate-400">Kỷ niệm trong ngày</p>
-                {selectedAnniversaries.length > 0 ? (
-                  <div className="mt-2 space-y-2">
-                    {selectedAnniversaries.map((occurrence) => (
-                      <div key={occurrence.key} className="flex items-start gap-2.5">
-                        <AnniversarySticker name={occurrence.event.sticker} size={24} className="shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-extrabold text-slate-800">{occurrence.event.title}</p>
-                          <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                            {occurrence.event.note || (occurrence.isStartDate ? 'Cột mốc ngày hai bạn bắt đầu bên nhau.' : 'Ngày đặc biệt của hai bạn.')}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-2 text-xs font-medium text-slate-500">Không có kỷ niệm trong ngày này.</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="mt-3 rounded-xl border border-white bg-white/80 p-3">
-              <p className="text-xs font-medium text-slate-500">
-                {user?.gender === 'female' ? 'Chưa có nhật ký sức khỏe cho ngày này.' : 'Chi tiết triệu chứng chỉ hiển thị cho chủ nhân nhật ký.'}
-              </p>
-              {selectedAnniversaries.length > 0 && (
-                <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-                  {selectedAnniversaries.map((occurrence) => (
-                    <div key={occurrence.key} className="flex items-start gap-2.5">
+            {/* Anniversaries */}
+            {selectedDayData.occurrences.length > 0 && (
+              <div className="border-t border-rose-100/30 pt-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Kỷ niệm & Ngày đặc biệt</p>
+                <div className="mt-2 space-y-2">
+                  {selectedDayData.occurrences.map((occurrence) => (
+                    <div key={occurrence.key} className="flex items-center gap-2.5 bg-white/40 p-2 rounded-xl border border-white/65">
                       <AnniversarySticker name={occurrence.event.sticker} size={24} className="shrink-0" />
-                      <div>
-                        <p className="text-xs font-extrabold text-slate-800">{occurrence.event.title}</p>
-                        <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                          {occurrence.event.note || 'Ngày đặc biệt của hai bạn.'}
-                        </p>
+                      <div className="min-w-0">
+                        <p className="text-xs font-extrabold text-slate-800 leading-tight">{occurrence.event.title}</p>
+                        {occurrence.event.note && (
+                          <p className="mt-0.5 text-xs text-slate-500 truncate">{occurrence.event.note}</p>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+
+            {/* Couple Questions */}
+            {selectedDayData.question && (
+              <div className="border-t border-rose-100/30 pt-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Câu hỏi của chúng mình</p>
+                  <span className={[
+                    "text-[10px] px-2 py-0.5 rounded-full font-bold border",
+                    selectedDayData.question.status === 'UNANSWERED' ? 'bg-slate-100 text-slate-500 border-slate-200' : '',
+                    selectedDayData.question.status === 'WAITING_PARTNER' ? 'bg-amber-50 text-amber-600 border-amber-100' : '',
+                    selectedDayData.question.status === 'UNLOCKED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : '',
+                  ].join(' ')}>
+                    {selectedDayData.question.status === 'UNANSWERED' ? 'Chưa trả lời' : ''}
+                    {selectedDayData.question.status === 'WAITING_PARTNER' ? 'Chờ Người ấy' : ''}
+                    {selectedDayData.question.status === 'UNLOCKED' ? 'Đã mở khóa' : ''}
+                  </span>
+                </div>
+                <div className="mt-2 bg-white/60 p-3 rounded-xl border border-white/80">
+                  <p className="text-xs font-black text-slate-800">“{selectedDayData.question.questionText}”</p>
+                  <p className="text-[10px] text-slate-400 mt-1 font-bold">Chủ đề: {selectedDayData.question.category}</p>
+
+                  {/* Answers if unlocked */}
+                  {selectedDayData.question.status === 'UNLOCKED' && (
+                    <div className="mt-3 space-y-2.5 border-t border-slate-100 pt-2.5">
+                      {selectedDayData.question.myAnswer && (
+                        <div className="text-xs">
+                          <span className="font-extrabold text-rose-600">Bạn:</span>{' '}
+                          <span className="text-slate-700">{selectedDayData.question.myAnswer.content}</span>
+                          {wasAnswerEdited(selectedDayData.question.myAnswer) && (
+                            <span className="text-[10px] text-slate-400 ml-1.5">(Đã chỉnh sửa)</span>
+                          )}
+                        </div>
+                      )}
+                      {selectedDayData.question.partnerAnswer && (
+                        <div className="text-xs">
+                          <span className="font-extrabold text-blue-600">Người ấy:</span>{' '}
+                          <span className="text-slate-700">{selectedDayData.question.partnerAnswer.content}</span>
+                          {wasAnswerEdited(selectedDayData.question.partnerAnswer) && (
+                            <span className="text-[10px] text-slate-400 ml-1.5">(Đã chỉnh sửa)</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </section>
       )}
 
@@ -358,7 +490,7 @@ export default function CyclePreviewCalendar({ cycles, insights, className = '' 
           </span>
         ))}
         {hasPartner && (
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 border-l border-slate-200 pl-4">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 border-l border-slate-200/50 pl-4">
             <span className="size-2.5 rounded-full bg-pink-400" />
             Ngày đặc biệt / Kỷ niệm
           </span>

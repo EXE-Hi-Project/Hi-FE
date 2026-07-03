@@ -47,7 +47,7 @@ const CONTENT: Record<LegalKind, {
       {
         title: '5. Gói Đồng Hành và thanh toán',
         body: [
-          'Gói Free gồm đầy đủ công cụ chăm sóc sức khỏe, cá nhân hóa AI và nhắc nhở. Premium mở hạn mức AI cao hơn, phân tích chuyên sâu và trải nghiệm cặp đôi nâng cao.',
+          'Gói Free gồm đầy đủ công cụ chăm sóc sức khỏe, cá nhân hóa AI và nhắc nhở. Hi Pro và Hi Max mở hạn mức AI cao hơn, phân tích chuyên sâu và trải nghiệm cặp đôi nâng cao.',
           'Chính sách hủy, hoàn tiền và thời hạn gói có thể được cập nhật theo cổng thanh toán đang dùng.',
         ],
       },

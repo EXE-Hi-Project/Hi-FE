@@ -82,7 +82,7 @@ function getWeatherTone(code: number) {
   return DEFAULT_WEATHER;
 }
 
-export default function WeatherForecast() {
+export default function WeatherForecast({ compact }: { compact?: boolean }) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -155,6 +155,20 @@ export default function WeatherForecast() {
   const finalWeather = weather ?? DEFAULT_WEATHER;
 
   if (loading) {
+    if (compact) {
+      return (
+        <div className="h-[52px] w-full max-w-[500px] rounded-2xl border border-white/75 bg-white/65 p-3 shadow-sm backdrop-blur-md flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="size-8 rounded-lg bg-slate-200" />
+            <div className="space-y-1">
+              <div className="h-3.5 w-20 rounded bg-slate-200" />
+              <div className="h-2.5 w-12 rounded bg-slate-200" />
+            </div>
+          </div>
+          <div className="h-6 w-10 rounded bg-slate-200" />
+        </div>
+      );
+    }
     return (
       <div className="min-w-[250px] max-w-[300px] rounded-[1.45rem] border border-white/75 bg-white/65 p-1.5 shadow-sm backdrop-blur-md">
         <div className="grid grid-cols-[1fr_76px] gap-1.5">
@@ -162,6 +176,39 @@ export default function WeatherForecast() {
           <div className="h-20 animate-pulse rounded-[1.05rem] bg-slate-100" />
           <div className="h-11 animate-pulse rounded-2xl bg-slate-100" />
           <div className="h-11 animate-pulse rounded-2xl bg-slate-100" />
+        </div>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className={`group relative w-full max-w-[360px] overflow-hidden rounded-2xl border border-white/75 bg-gradient-to-br ${finalWeather.surfaceClassName} px-3 py-2 shadow-sm backdrop-blur-md transition duration-300 flex items-center justify-between gap-2`}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-slate-100">
+            <span className={`material-symbols-outlined text-[20px] ${finalWeather.iconColor} transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6`}>
+              {finalWeather.icon}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-black leading-tight text-slate-800">{finalWeather.locationName}</p>
+            <p className="hidden truncate text-[10px] font-bold text-slate-500 leading-none mt-0.5 sm:block">{finalWeather.description}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-right">
+            <p className="text-lg font-black leading-none text-slate-900">
+              {finalWeather.temp}<span className="align-top text-xs text-sky-600">°C</span>
+            </p>
+          </div>
+          <div className="hidden md:block text-left border-l border-slate-200/50 pl-3">
+            <span className="block text-[9px] font-bold text-slate-400">Cảm giác</span>
+            <span className="block text-xs font-black leading-tight text-slate-800">{finalWeather.apparentTemp}°C</span>
+          </div>
+          <div className="hidden lg:block text-left border-l border-slate-200/50 pl-3">
+            <span className="block text-[9px] font-bold text-slate-400">Độ ẩm</span>
+            <span className="block text-xs font-black leading-tight text-slate-800">{finalWeather.humidity}%</span>
+          </div>
         </div>
       </div>
     );

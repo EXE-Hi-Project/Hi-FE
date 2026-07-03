@@ -61,18 +61,13 @@ export const trackEvent = async (
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
-    }).catch(err => {
-      // Fail silently in production, log in dev
-      if (import.meta.env.DEV) {
-        console.error('Analytics track error:', err);
-      }
+    }).catch(() => {
+      // Analytics is best-effort and should never affect app UX or local QA.
     }).finally(() => {
       window.clearTimeout(timeout);
     });
-  } catch (e) {
-    if (import.meta.env.DEV) {
-      console.error('Analytics tracking failed:', e);
-    }
+  } catch {
+    // Analytics is best-effort and should never affect app UX or local QA.
   }
 };
 

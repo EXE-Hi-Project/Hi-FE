@@ -71,7 +71,7 @@ export default function AdminOverviewPanel() {
   return (
     <div className="space-y-6">
       <section>
-        <h2 className="text-xl font-extrabold tracking-tight text-slate-950">Tình hình vận hành</h2>
+        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-950">Tình hình vận hành</h2>
         <p className="mt-1 text-sm text-slate-500">Các chỉ số chính và việc cần kiểm tra trong hệ thống.</p>
       </section>
 

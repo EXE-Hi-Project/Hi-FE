@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import HiLogo from '../components/ui/HiLogo';
 import { trackEvent } from '../utils/analytics';
-import { buildGoogleOAuthUrl } from '../lib/googleAuth';
+import { buildGoogleOAuthUrl, extractSafeNextPath, getSafeNextPath } from '../lib/googleAuth';
 
 const schema = z.object({
   name: z.string().min(2, 'Tên tối thiểu 2 ký tự'),
@@ -76,6 +76,7 @@ function getStrength(pw: string): { score: number; label: string; color: string 
 export default function RegisterPage() {
   const { register: registerUser, socialLogin, verifyActivation, resendActivation, isLoading } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
@@ -86,14 +87,16 @@ export default function RegisterPage() {
 
   const navigateAfterLogin = (user: ReturnType<typeof useAuthStore.getState>['user']) => {
     if (!user) return;
-    if (user.role === 'admin') navigate('/admin');
-    else if (!user.onboardingCompleted) navigate('/onboarding');
-    else if (user.gender === 'female') navigate('/female-dashboard');
-    else navigate('/male-dashboard');
+    let destination = '/male-dashboard';
+    if (user.role === 'admin') destination = '/admin';
+    else if (!user.onboardingCompleted) destination = '/onboarding';
+    else if (user.gender === 'female') destination = '/female-dashboard';
+    navigate(getSafeNextPath(location.search, destination));
   };
 
   const handleGoogleLogin = () => {
-    window.location.assign(buildGoogleOAuthUrl());
+    const nextPath = extractSafeNextPath(location.search) ?? undefined;
+    window.location.assign(buildGoogleOAuthUrl(nextPath));
   };
 
   const handleFacebookLogin = async () => {
@@ -151,7 +154,7 @@ export default function RegisterPage() {
       } else {
         trackEvent('REGISTER', 'register_page');
         toast.success('Đăng ký thành công!');
-        navigate('/onboarding');
+        navigate(getSafeNextPath(location.search, '/onboarding'));
       }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Có lỗi xảy ra');
@@ -167,7 +170,7 @@ export default function RegisterPage() {
       await verifyActivation(pendingEmail, otp);
       trackEvent('REGISTER', 'register_page');
       toast.success('Kích hoạt tài khoản thành công!');
-      navigate('/onboarding');
+      navigate(getSafeNextPath(location.search, '/onboarding'));
     } catch (err: any) {
       toast.error(err.message || 'Xác minh OTP thất bại');
     }

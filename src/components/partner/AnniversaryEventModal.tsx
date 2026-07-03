@@ -13,9 +13,8 @@ import {
   ANNIVERSARY_STICKERS,
   ANNIVERSARY_STICKER_LABELS,
   ANNIVERSARY_SYMBOL_LABELS,
-  AnniversarySticker,
-  AnniversarySymbol,
-} from './AnniversaryVisuals';
+} from './AnniversaryVisualData';
+import { AnniversarySticker, AnniversarySymbol } from './AnniversaryVisuals';
 
 interface AnniversaryEventModalProps {
   open: boolean;

@@ -6,6 +6,7 @@ import {
 } from '../config/subscriptionPlans';
 import Spinner from './ui/Spinner';
 import { CalendarBlank, CheckCircle, CrownSimple } from '@phosphor-icons/react';
+import { FALLBACK_PRICING, formatPlanPrice, usePlanPricing } from '../hooks/usePlanPricing';
 
 type PaidPlanId = 'monthly' | 'yearly';
 
@@ -21,22 +22,15 @@ interface PricingPlan {
   features: string[];
 }
 
-function formatVnd(value: string) {
-  const num = Number.parseInt(value, 10);
-  return Number.isNaN(num) ? value : `${num.toLocaleString('vi-VN')}đ`;
-}
-
 export default function PricingCard() {
   const { data: subscription, isLoading } = useSubscription();
+  const { data: pricing = FALLBACK_PRICING } = usePlanPricing();
   const checkout = useCheckout();
   const cancelSub = useCancelSubscription();
 
   const isPremium = subscription?.tier === 'PREMIUM';
   const isCanceled = subscription?.status === 'canceled';
   const currentPeriodEnd = subscription?.currentPeriodEnd;
-
-  const monthlyPrice = formatVnd(import.meta.env.VITE_PAYMENT_PLAN_MONTHLY_PRICE || '49000');
-  const yearlyPrice = formatVnd(import.meta.env.VITE_PAYMENT_PLAN_YEARLY_PRICE || '399000');
 
   const plans: PricingPlan[] = [
     {
@@ -49,8 +43,8 @@ export default function PricingCard() {
     },
     {
       id: 'monthly',
-      label: 'Đồng Hành Premium Tháng',
-      price: monthlyPrice,
+      label: 'Hi Pro',
+      price: formatPlanPrice(pricing.hiPro.currentPrice),
       period: '/30 ngày',
       description: 'Phân tích sâu hơn và tăng hạn mức Hi AI.',
       priceId: 'monthly',
@@ -58,13 +52,13 @@ export default function PricingCard() {
     },
     {
       id: 'yearly',
-      label: 'Đồng Hành Premium Năm',
-      price: yearlyPrice,
+      label: 'Hi Max',
+      price: formatPlanPrice(pricing.hiMax.currentPrice),
       period: '/365 ngày',
-      description: 'Cùng tính năng Premium, tiết kiệm hơn.',
+      description: 'Đồng hành trọn năm với mức tiết kiệm tốt hơn.',
       priceId: 'yearly',
       highlight: true,
-      badge: 'Tiết kiệm 32%',
+      badge: pricing.hiMax.discountPercent > 0 ? `Giảm ${pricing.hiMax.discountPercent}%` : 'Tiết kiệm dài hạn',
       features: [...PREMIUM_YEARLY_FEATURES],
     },
   ];
@@ -78,7 +72,7 @@ export default function PricingCard() {
   }
 
   if (isPremium) {
-    const planName = subscription?.plan === 'PREMIUM_YEARLY' ? 'Premium năm' : 'Premium tháng';
+    const planName = subscription?.plan === 'PREMIUM_YEARLY' ? 'Hi Max' : 'Hi Pro';
 
     return (
       <section className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm sm:p-6">
@@ -89,7 +83,7 @@ export default function PricingCard() {
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-lg font-extrabold text-slate-900">Hi Premium đang hoạt động</h3>
+                <h3 className="text-lg font-extrabold text-slate-900">{planName} đang hoạt động</h3>
                 <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
                   <CheckCircle size={13} weight="fill" />
                   Đã kích hoạt
@@ -120,7 +114,7 @@ export default function PricingCard() {
               <button
                 type="button"
                 onClick={() => {
-                  if (confirm('Bạn có chắc chắn muốn dừng gia hạn Premium?')) cancelSub.mutate();
+                  if (confirm(`Bạn có chắc chắn muốn dừng gia hạn ${planName}?`)) cancelSub.mutate();
                 }}
                 disabled={cancelSub.isPending}
                 className="h-10 whitespace-nowrap rounded-xl border border-slate-200 px-4 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 active:scale-[0.98] disabled:opacity-60"
@@ -145,7 +139,7 @@ export default function PricingCard() {
         </p>
         {isCanceled && (
           <p className="mt-3 text-sm font-bold text-pink-600">
-            Gói Premium trước đó đã dừng. Bạn có thể chọn lại gói phù hợp khi cần.
+            Gói trả phí trước đó đã dừng. Bạn có thể chọn lại Hi Pro hoặc Hi Max khi cần.
           </p>
         )}
       </div>
@@ -170,6 +164,11 @@ export default function PricingCard() {
 
               <div>
                 <p className="text-lg font-black text-slate-900">{plan.label}</p>
+                {!isFreePlan && pricing.activeSale ? (
+                  <p className="mt-3 text-sm font-bold text-slate-400 line-through">
+                    {formatPlanPrice(plan.id === 'monthly' ? pricing.hiPro.basePrice : pricing.hiMax.basePrice)}
+                  </p>
+                ) : null}
                 <div className="mt-4 flex items-baseline text-slate-900">
                   <span className="text-4xl font-black tracking-tight">{plan.price}</span>
                   <span className="ml-1 text-lg font-bold text-slate-400">{plan.period}</span>
@@ -198,7 +197,7 @@ export default function PricingCard() {
                     : 'hi-btn-primary'
                 }`}
               >
-                {isFreePlan ? 'Đồng Hành Cơ Bản' : checkout.isPending ? 'Đang xử lý...' : `Đăng ký gói ${plan.id === 'monthly' ? 'Tháng' : 'Năm'}`}
+                {isFreePlan ? 'Đồng Hành Cơ Bản' : checkout.isPending ? 'Đang xử lý...' : `Đăng ký ${plan.label}`}
               </button>
             </div>
           );

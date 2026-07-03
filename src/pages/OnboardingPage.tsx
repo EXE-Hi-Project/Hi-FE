@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import HiLogo from '../components/ui/HiLogo';
 import api from '../lib/api';
 import { trackEvent } from '../utils/analytics';
+import { getSafeNextPath } from '../lib/googleAuth';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ function getDaysInMonth(year: number, month: number) {
 export default function OnboardingPage() {
   const { user, setUser } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -156,7 +158,7 @@ export default function OnboardingPage() {
       setUser(data.user);
       trackEvent('ONBOARDING_COMPLETE', 'onboarding_page');
       toast.success('Thiết lập hoàn tất! Chào mừng bạn 🎉');
-      navigate('/dashboard');
+      navigate(getSafeNextPath(location.search, '/dashboard'));
     } catch {
       toast.error('Có lỗi xảy ra, vui lòng thử lại');
     } finally {

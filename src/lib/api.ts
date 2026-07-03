@@ -1,4 +1,4 @@
-import axios, { AxiosHeaders } from 'axios';
+import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 import { toast } from 'react-hot-toast';
 import { buildLoginRedirect, clearAuthSession } from './session';
 
@@ -32,8 +32,25 @@ function isUnsafeMethod(method?: string) {
   return ['post', 'put', 'patch', 'delete'].includes((method ?? 'get').toLowerCase());
 }
 
-async function ensureCsrfToken() {
-  if (csrfToken) return;
+function readCookie(name: string) {
+  return document.cookie
+    .split('; ')
+    .find((row) => row.startsWith(`${name}=`))
+    ?.split('=')
+    .slice(1)
+    .join('=');
+}
+
+function attachCsrfHeader(config: InternalAxiosRequestConfig) {
+  const token = csrfToken ?? decodeURIComponent(readCookie('XSRF-TOKEN') ?? '');
+  if (!token) return;
+  const headers = AxiosHeaders.from(config.headers);
+  headers.set(csrfHeaderName, token);
+  config.headers = headers;
+}
+
+async function ensureCsrfToken(force = false) {
+  if (csrfToken && !force) return;
   csrfRequest ??= api.get<CsrfResponse>('/auth/csrf').then(({ data }) => {
     csrfToken = data.data?.csrfToken ?? null;
     csrfHeaderName = data.data?.headerName ?? csrfHeaderName;
@@ -46,11 +63,7 @@ async function ensureCsrfToken() {
 api.interceptors.request.use(async (config) => {
   if (isUnsafeMethod(config.method) && !config.url?.includes('/auth/csrf')) {
     await ensureCsrfToken();
-    if (csrfToken) {
-      const headers = AxiosHeaders.from(config.headers);
-      headers.set(csrfHeaderName, csrfToken);
-      config.headers = headers;
-    }
+    attachCsrfHeader(config);
   }
   return config;
 });
@@ -69,6 +82,20 @@ api.interceptors.response.use(
       url.includes('/auth/refresh') ||
       url.includes('/auth/forgot-password') ||
       url.includes('/auth/reset-password');
+    const csrfMissing = err.response?.status === 403
+      && err.config
+      && isUnsafeMethod(err.config.method)
+      && String(err.response?.data?.message ?? '').toLowerCase().includes('csrf');
+
+    if (csrfMissing && !err.config.__csrfRetried) {
+      csrfToken = null;
+      err.config.__csrfRetried = true;
+      return ensureCsrfToken(true).then(() => {
+        attachCsrfHeader(err.config);
+        return api.request(err.config);
+      });
+    }
+
     if (err.response?.status === 403 && err.config && isUnsafeMethod(err.config.method)) {
       csrfToken = null;
     }

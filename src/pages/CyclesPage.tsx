@@ -178,7 +178,7 @@ export default function CyclesPage() {
                 {[
                   { icon: 'calendar_month', label: 'Độ dài TB', value: `${avgLen} ngày`, from: '#f9a8d4', to: '#f472b6', iconColor: '#f472b6' },
                   { icon: 'water_drop', label: 'Kinh nguyệt TB', value: `${avgPeriod} ngày`, from: '#fca5a5', to: '#f87171', iconColor: '#ef4444' },
-                  { icon: 'bar_chart', label: 'Tính đều đặn', value: insights?.advancedAnalyticsAvailable ? `${regularity}%` : 'Premium', from: '#93c5fd', to: '#38bdf8', iconColor: '#0284c7' },
+                  { icon: 'bar_chart', label: 'Tính đều đặn', value: insights?.advancedAnalyticsAvailable ? `${regularity}%` : 'Hi Pro', from: '#93c5fd', to: '#38bdf8', iconColor: '#0284c7' },
                   { icon: 'history', label: 'Chu kỳ đã ghi', value: `${cyclesTotal} chu kỳ`, from: '#c4b5fd', to: '#a78bfa', iconColor: '#7c3aed' },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-white/90 backdrop-blur-sm rounded-2xl p-5 shadow-sm border border-white/80 flex items-center gap-4">
@@ -602,7 +602,7 @@ export default function CyclesPage() {
                 </div>
               ) : (
                 <PremiumLockCard
-                  title="Phân tích chu kỳ chuyên sâu thuộc Premium"
+                  title="Phân tích chu kỳ chuyên sâu với Hi Pro / Hi Max"
                   description="Mở điểm ổn định, biểu đồ xu hướng dài hạn, phát hiện kỳ ngoại lệ và phân tích tác động triệu chứng theo từng giai đoạn. Lịch sử, dự đoán cơ bản và cảnh báo an toàn vẫn miễn phí."
                 />
               )}

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { ApiResponse, AuthPayload, RegisterDto, User } from '../types';
 import api from '../lib/api';
-import { clearAuthSession } from '../lib/session';
+import { clearAuthSession, hasAuthSessionMarker, markAuthSessionActive } from '../lib/session';
 
 type AuthApiResponse = ApiResponse<AuthPayload> & Partial<AuthPayload>;
 type UserApiResponse = ApiResponse<{ user: User }> & { user?: User };
@@ -48,8 +48,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
   isBootstrapping: true,
 
   bootstrapSession: async () => {
+    if (!hasAuthSessionMarker()) {
+      set({ user: null, token: null, isBootstrapping: false });
+      return;
+    }
     try {
       const { data } = await api.get<UserApiResponse>('/auth/me');
+      markAuthSessionActive();
       set({ user: unwrapUserPayload(data), token: SESSION_MARKER, isBootstrapping: false });
     } catch {
       clearAuthSession();
@@ -62,6 +67,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     try {
       const { data } = await api.post<AuthApiResponse>('/auth/login', { email, password });
       const payload = unwrapAuthPayload(data);
+      markAuthSessionActive();
       set({ user: payload.user, token: SESSION_MARKER, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false });
@@ -78,6 +84,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
         return data.data;
       }
       const payload = unwrapAuthPayload(data);
+      markAuthSessionActive();
       set({ user: payload.user, token: SESSION_MARKER });
       return payload.user;
     } catch (err: any) {
@@ -91,6 +98,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     try {
       const { data } = await api.post<AuthApiResponse>('/auth/verify-activation', { email, otp });
       const payload = unwrapAuthPayload(data);
+      markAuthSessionActive();
       set({ user: payload.user, token: SESSION_MARKER, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false });
@@ -111,6 +119,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     try {
       const { data } = await api.post<AuthApiResponse>(`/auth/${provider}`, payload);
       const authPayload = unwrapAuthPayload(data);
+      markAuthSessionActive();
       set({ user: authPayload.user, token: SESSION_MARKER, isLoading: false });
       return authPayload.user;
     } catch (err: any) {
@@ -122,6 +131,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   refreshSession: async () => {
     const { data } = await api.post<AuthApiResponse>('/auth/refresh');
     const payload = unwrapAuthPayload(data);
+    markAuthSessionActive();
     set({ user: payload.user, token: SESSION_MARKER });
   },
 

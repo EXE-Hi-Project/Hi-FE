@@ -23,7 +23,7 @@ export default function PremiumLockCard({
         <div>
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em]">
             <span className="material-symbols-outlined text-[18px]">workspace_premium</span>
-            Premium
+            Hi Pro · Hi Max
           </div>
           <h3 className="mt-2 text-lg font-black text-slate-900">{title}</h3>
           <p className="mt-1 max-w-2xl text-sm font-semibold leading-relaxed text-slate-500">{description}</p>
@@ -32,7 +32,7 @@ export default function PremiumLockCard({
           to="/settings#pricing"
           className="hi-btn-primary inline-flex shrink-0 items-center justify-center rounded-full px-5 py-2.5 text-sm font-black"
         >
-          Xem gói Premium
+          Xem Hi Pro &amp; Hi Max
         </Link>
       </div>
     </div>

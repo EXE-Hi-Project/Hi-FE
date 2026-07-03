@@ -43,7 +43,7 @@ export default function PartnerQuestionPreview({ enabled, variant }: PartnerQues
       {!hasCouplePremium ? (
         <>
           <p className="mt-2 text-sm font-black leading-snug text-slate-800">Mở kết nối sâu hơn mỗi ngày</p>
-          <p className="mt-2 text-[11px] font-bold opacity-75">Premium của một người mở quyền cho cả hai</p>
+          <p className="mt-2 text-[11px] font-bold opacity-75">Hi Pro hoặc Hi Max của một người mở quyền cho cả hai</p>
         </>
       ) : questionQuery.isLoading ? (
         <div className="mt-3 space-y-2 animate-pulse">
