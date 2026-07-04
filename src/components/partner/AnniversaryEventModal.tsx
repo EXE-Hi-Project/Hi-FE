@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { AxiosError } from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Trash, X } from '@phosphor-icons/react';
 import { toast } from 'react-hot-toast';
-import { X, Trash } from '@phosphor-icons/react';
 import api from '../../lib/api';
 import type {
-  CoupleAnniversaryEvent,
   CoupleAnniversaryColor,
   CoupleAnniversaryEffect,
+  CoupleAnniversaryEvent,
 } from '../../types/shared';
+import { ICONS } from '../../utils/coupleAnniversaryCalendar';
 import Button from '../ui/Button';
 import {
-  ANNIVERSARY_STICKERS,
   ANNIVERSARY_STICKER_LABELS,
+  ANNIVERSARY_STICKERS,
   ANNIVERSARY_SYMBOL_LABELS,
 } from './AnniversaryVisualData';
 import { AnniversarySticker, AnniversarySymbol } from './AnniversaryVisuals';
@@ -19,10 +21,23 @@ import { AnniversarySticker, AnniversarySymbol } from './AnniversaryVisuals';
 interface AnniversaryEventModalProps {
   open: boolean;
   onClose: () => void;
-  date: string; // ISO date string (YYYY-MM-DD)
+  date: string;
   existingEvent?: CoupleAnniversaryEvent | null;
   variant?: 'female' | 'male';
 }
+
+interface AnniversaryPayload {
+  eventDate: string;
+  title: string;
+  note: string;
+  color: CoupleAnniversaryColor;
+  effect: CoupleAnniversaryEffect;
+  icon: string;
+  sticker: string;
+}
+
+const COLORS: CoupleAnniversaryColor[] = ['pink', 'rose', 'violet', 'sky', 'emerald', 'amber'];
+const EFFECTS: CoupleAnniversaryEffect[] = ['none', 'sparkle', 'float', 'glow', 'confetti'];
 
 const COLOR_LABELS: Record<CoupleAnniversaryColor, string> = {
   pink: 'Hồng ngọt ngào',
@@ -33,21 +48,22 @@ const COLOR_LABELS: Record<CoupleAnniversaryColor, string> = {
   amber: 'Vàng ấm áp',
 };
 
+const COLOR_SWATCH_CLASS: Record<CoupleAnniversaryColor, string> = {
+  pink: 'bg-pink-400',
+  rose: 'bg-rose-500',
+  violet: 'bg-violet-500',
+  sky: 'bg-sky-400',
+  emerald: 'bg-emerald-500',
+  amber: 'bg-amber-500',
+};
+
 const EFFECT_LABELS: Record<CoupleAnniversaryEffect, string> = {
-  none: 'Không hiệu ứng',
+  none: 'Tĩnh',
   sparkle: 'Lấp lánh',
-  float: 'Bay bổng',
+  float: 'Bay nhẹ',
   glow: 'Tỏa sáng',
   confetti: 'Pháo hoa',
 };
-
-import {
-  ICONS,
-} from '../../utils/coupleAnniversaryCalendar';
-
-const COLORS: CoupleAnniversaryColor[] = ['pink', 'rose', 'violet', 'sky', 'emerald', 'amber'];
-const EFFECTS: CoupleAnniversaryEffect[] = ['none', 'sparkle', 'float', 'glow', 'confetti'];
-const STICKERS = ANNIVERSARY_STICKERS;
 
 export default function AnniversaryEventModal({
   open,
@@ -56,10 +72,12 @@ export default function AnniversaryEventModal({
   existingEvent,
   variant = 'female',
 }: AnniversaryEventModalProps) {
+  const queryClient = useQueryClient();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const isMale = variant === 'male';
-  const queryClient = useClient();
-  const accentBorder = isMale ? 'focus:border-blue-400 focus:ring-blue-100' : 'focus:border-pink-400 focus:ring-pink-100';
-
+  const accentBorder = isMale
+    ? 'focus:border-blue-400 focus:ring-blue-100'
+    : 'focus:border-pink-400 focus:ring-pink-100';
   const [eventDateVal, setEventDateVal] = useState('');
   const [eventTitle, setEventTitle] = useState('');
   const [eventNote, setEventNote] = useState('');
@@ -67,55 +85,58 @@ export default function AnniversaryEventModal({
   const [eventEffect, setEventEffect] = useState<CoupleAnniversaryEffect>('none');
   const [eventIcon, setEventIcon] = useState('favorite');
   const [eventSticker, setEventSticker] = useState('heart');
-
-  function useClient() {
-    return useQueryClient();
-  }
+  const isStartDate = existingEvent?.type === 'START_DATE';
 
   useEffect(() => {
-    if (open) {
-      if (existingEvent) {
-        setEventDateVal(existingEvent.eventDate.slice(0, 10));
-        setEventTitle(existingEvent.title || 'Ngày bên nhau');
-        setEventNote(existingEvent.note ?? '');
-        setEventColor(existingEvent.color);
-        setEventEffect(existingEvent.effect);
-        setEventIcon(existingEvent.icon);
-        setEventSticker(existingEvent.sticker);
-      } else {
-        setEventDateVal(date);
-        setEventTitle('');
-        setEventNote('');
-        setEventColor('pink');
-        setEventEffect('none');
-        setEventIcon('favorite');
-        setEventSticker('heart');
-      }
+    if (!open) return;
+    if (existingEvent) {
+      setEventDateVal(existingEvent.eventDate.slice(0, 10));
+      setEventTitle(existingEvent.title || 'Ngày bên nhau');
+      setEventNote(existingEvent.note ?? '');
+      setEventColor(existingEvent.color);
+      setEventEffect(existingEvent.effect);
+      setEventIcon(existingEvent.icon);
+      setEventSticker(existingEvent.sticker);
+    } else {
+      setEventDateVal(date);
+      setEventTitle('');
+      setEventNote('');
+      setEventColor('pink');
+      setEventEffect('none');
+      setEventIcon('favorite');
+      setEventSticker('heart');
     }
-  }, [open, date, existingEvent]);
+  }, [date, existingEvent, open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    closeButtonRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, open]);
 
   const saveMutation = useMutation({
-    mutationFn: (payload: {
-      eventDate: string;
-      title: string;
-      note: string;
-      color: string;
-      effect: string;
-      icon: string;
-      sticker: string;
-    }) => {
+    mutationFn: (payload: AnniversaryPayload) => {
+      if (existingEvent?.type === 'START_DATE') {
+        return api.put('/partner/anniversaries/start-date', {
+          startDate: payload.eventDate,
+          title: payload.title,
+          note: payload.note,
+          color: payload.color,
+          effect: payload.effect,
+          icon: payload.icon,
+          sticker: payload.sticker,
+        });
+      }
       if (existingEvent) {
-        if (existingEvent.type === 'START_DATE') {
-          return api.put('/partner/anniversaries/start-date', {
-            startDate: payload.eventDate,
-            title: payload.title,
-            note: payload.note,
-            color: payload.color,
-            effect: payload.effect,
-            icon: payload.icon,
-            sticker: payload.sticker,
-          });
-        }
         return api.put(`/partner/anniversaries/events/${existingEvent._id}`, payload);
       }
       return api.post('/partner/anniversaries/events', payload);
@@ -125,58 +146,66 @@ export default function AnniversaryEventModal({
       toast.success(existingEvent ? 'Đã lưu thay đổi' : 'Đã thêm kỷ niệm mới');
       onClose();
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Không thể lưu kỷ niệm');
+    onError: (error: AxiosError<{ message?: string }>) => {
+      toast.error(error.response?.data?.message || 'Không thể lưu kỷ niệm');
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => {
-      if (!existingEvent) {
-        throw new Error('No event to delete');
-      }
-      return api.delete(`/partner/anniversaries/events/${existingEvent._id}`);
-    },
+    mutationFn: () => api.delete(`/partner/anniversaries/events/${existingEvent?._id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['partner-anniversaries'] });
       toast.success('Đã xóa kỷ niệm');
       onClose();
     },
-    onError: () => {
-      toast.error('Không thể xóa kỷ niệm');
-    },
+    onError: () => toast.error('Không thể xóa kỷ niệm'),
   });
 
   if (!open) return null;
 
-  const isStartDate = existingEvent?.type === 'START_DATE';
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg rounded-3xl border border-slate-100 bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <h3 className="text-lg font-black text-slate-900">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-3 backdrop-blur-sm animate-fade-in sm:p-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="anniversary-modal-title"
+        className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl"
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4 sm:px-6">
+          <h2 id="anniversary-modal-title" className="text-lg font-black text-slate-900">
             {isStartDate
               ? 'Thiết lập Ngày bên nhau'
               : existingEvent
-              ? 'Chỉnh sửa ngày kỷ niệm'
-              : 'Thêm ngày kỷ niệm'}
-          </h3>
-          <button onClick={onClose} className="rounded-full p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
+                ? 'Chỉnh sửa ngày kỷ niệm'
+                : 'Thêm ngày kỷ niệm'}
+          </h2>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700"
+            aria-label="Đóng"
+          >
             <X size={18} />
           </button>
         </div>
 
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
+          className="grid gap-5 p-5 sm:p-6 md:grid-cols-[minmax(0,1fr)_18rem]"
+          onSubmit={(event) => {
+            event.preventDefault();
             if (!eventDateVal || (!isStartDate && !eventTitle.trim())) {
               toast.error('Vui lòng điền đủ ngày và tiêu đề');
               return;
             }
             saveMutation.mutate({
               eventDate: eventDateVal,
-              title: isStartDate ? 'Ngày bên nhau' : eventTitle.trim(),
+              title: eventTitle.trim() || 'Ngày bên nhau',
               note: eventNote.trim(),
               color: eventColor,
               effect: eventEffect,
@@ -184,153 +213,174 @@ export default function AnniversaryEventModal({
               sticker: eventSticker,
             });
           }}
-          className="mt-4 space-y-4"
         >
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ngày kỷ niệm</label>
-            <input
-              type="date"
-              value={eventDateVal}
-              onChange={(e) => setEventDateVal(e.target.value)}
-              className={`mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 ${accentBorder}`}
-              max={isStartDate ? new Date().toISOString().slice(0, 10) : undefined}
-              required
-            />
-          </div>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="anniversary-date" className="text-xs font-bold text-slate-600">Ngày kỷ niệm</label>
+              <input
+                id="anniversary-date"
+                type="date"
+                value={eventDateVal}
+                onChange={(event) => setEventDateVal(event.target.value)}
+                className={`mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-800 outline-none focus:ring-4 ${accentBorder}`}
+                max={isStartDate ? new Date().toISOString().slice(0, 10) : undefined}
+                required
+              />
+            </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              {isStartDate ? 'Tiêu đề hiển thị' : 'Tiêu đề kỷ niệm'}
-            </label>
-            <input
-              type="text"
-              value={eventTitle}
-              onChange={(e) => setEventTitle(e.target.value)}
-              placeholder={isStartDate ? "Ví dụ: Ngày bên nhau, Ngày bắt đầu..." : "Ví dụ: Kỷ niệm chuyến đi chơi xa đầu tiên"}
-              className={`mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:ring-4 ${accentBorder}`}
-              maxLength={120}
-              required
-            />
-          </div>
+            <div>
+              <label htmlFor="anniversary-title" className="text-xs font-bold text-slate-600">
+                {isStartDate ? 'Tên hiển thị' : 'Tiêu đề kỷ niệm'}
+              </label>
+              <input
+                id="anniversary-title"
+                type="text"
+                value={eventTitle}
+                onChange={(event) => setEventTitle(event.target.value)}
+                placeholder={isStartDate ? 'Ngày bên nhau' : 'Ví dụ: Chuyến đi đầu tiên'}
+                className={`mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:ring-4 ${accentBorder}`}
+                maxLength={120}
+                required={!isStartDate}
+              />
+            </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ghi chú thêm</label>
-            <textarea
-              value={eventNote}
-              onChange={(e) => setEventNote(e.target.value)}
-              placeholder="Lưu lại những cảm xúc đặc biệt..."
-              rows={3}
-              className={`mt-1.5 w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:ring-4 ${accentBorder}`}
-              maxLength={1000}
-            />
-          </div>
+            <div>
+              <label htmlFor="anniversary-note" className="text-xs font-bold text-slate-600">Ghi chú</label>
+              <textarea
+                id="anniversary-note"
+                value={eventNote}
+                onChange={(event) => setEventNote(event.target.value)}
+                placeholder="Lưu lại điều hai bạn muốn nhớ..."
+                rows={5}
+                className={`mt-1.5 w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:ring-4 ${accentBorder}`}
+                maxLength={1000}
+              />
+            </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Màu sắc hiển thị</label>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setEventColor(c)}
-                  className={`flex items-center gap-2 rounded-xl border p-2 text-xs font-bold transition hover:bg-slate-50 ${
-                    eventColor === c
-                      ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
-                      : 'border-slate-200 text-slate-700'
-                  }`}
-                >
-                  <span className={`h-3 w-3 rounded-full bg-${c}-500 inline-block`} style={{ backgroundColor: c === 'pink' ? '#f472b6' : c === 'rose' ? '#f43f5e' : c === 'violet' ? '#8b5cf6' : c === 'sky' ? '#38bdf8' : c === 'emerald' ? '#10b981' : '#f59e0b' }} />
-                  {COLOR_LABELS[c]}
-                </button>
-              ))}
+            <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
+              <span className="grid size-11 place-items-center rounded-xl bg-slate-50">
+                <AnniversarySticker name={eventSticker} size={28} />
+              </span>
+              <div>
+                <p className="text-xs font-bold text-slate-500">Xem trước</p>
+                <div className="mt-1 flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                  <AnniversarySymbol name={eventIcon} size={17} />
+                  {eventTitle.trim() || 'Ngày kỷ niệm'}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hiệu ứng động</label>
-            <select
-              value={eventEffect}
-              onChange={(e) => setEventEffect(e.target.value as CoupleAnniversaryEffect)}
-              className={`mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:ring-4 ${accentBorder}`}
-            >
-              {EFFECTS.map((ef) => (
-                <option key={ef} value={ef}>
-                  {EFFECT_LABELS[ef]}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-5 border-t border-slate-100 pt-5 md:border-l md:border-t-0 md:pl-5 md:pt-0">
+            <fieldset>
+              <legend className="text-xs font-bold text-slate-600">Màu sắc</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setEventColor(color)}
+                    className={`grid size-9 place-items-center rounded-lg border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 ${
+                      eventColor === color ? 'border-slate-900 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-400'
+                    }`}
+                    aria-label={COLOR_LABELS[color]}
+                    aria-pressed={eventColor === color}
+                    title={COLOR_LABELS[color]}
+                  >
+                    <span className={`size-4 rounded-full ${COLOR_SWATCH_CLASS[color]}`} />
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-xs font-bold text-slate-600">Hiệu ứng</legend>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {EFFECTS.map((effect) => (
+                  <button
+                    key={effect}
+                    type="button"
+                    onClick={() => setEventEffect(effect)}
+                    className={`min-h-9 rounded-lg border px-2 text-xs font-bold transition ${
+                      eventEffect === effect
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
+                    }`}
+                    aria-pressed={eventEffect === effect}
+                  >
+                    {EFFECT_LABELS[effect]}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-xs font-bold text-slate-600">Icon biểu tượng</legend>
+              <div className="mt-2 grid grid-cols-6 gap-2">
+                {ICONS.map((icon) => (
+                  <button
+                    key={icon}
+                    type="button"
+                    onClick={() => setEventIcon(icon)}
+                    className={`grid aspect-square place-items-center rounded-lg border transition ${
+                      eventIcon === icon
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-200 bg-white text-slate-500 hover:border-pink-200 hover:text-pink-600'
+                    }`}
+                    aria-label={ANNIVERSARY_SYMBOL_LABELS[icon] || icon}
+                    aria-pressed={eventIcon === icon}
+                    title={ANNIVERSARY_SYMBOL_LABELS[icon] || icon}
+                  >
+                    <AnniversarySymbol name={icon} size={18} />
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-xs font-bold text-slate-600">Sticker hình dán</legend>
+              <div className="mt-2 grid grid-cols-7 gap-2">
+                {ANNIVERSARY_STICKERS.map((sticker) => (
+                  <button
+                    key={sticker}
+                    type="button"
+                    onClick={() => setEventSticker(sticker)}
+                    className={`grid aspect-square place-items-center rounded-lg border bg-white transition ${
+                      eventSticker === sticker ? 'border-pink-400 ring-2 ring-pink-100' : 'border-slate-200 hover:border-pink-200'
+                    }`}
+                    aria-label={ANNIVERSARY_STICKER_LABELS[sticker] || sticker}
+                    aria-pressed={eventSticker === sticker}
+                    title={ANNIVERSARY_STICKER_LABELS[sticker] || sticker}
+                  >
+                    <AnniversarySticker name={sticker} size={23} />
+                  </button>
+                ))}
+              </div>
+            </fieldset>
           </div>
 
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Icon biểu tượng</label>
-            <div className="mt-2 grid grid-cols-6 gap-2">
-              {ICONS.map((icon) => (
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between md:col-span-2">
+            <div>
+              {existingEvent && !isStartDate && (
                 <button
-                  key={icon}
                   type="button"
-                  onClick={() => setEventIcon(icon)}
-                  className={`grid aspect-square place-items-center rounded-xl border transition active:scale-95 ${
-                    eventIcon === icon
-                      ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-pink-200 hover:bg-pink-50 hover:text-pink-600'
-                  }`}
-                  title={ANNIVERSARY_SYMBOL_LABELS[icon] || icon}
-                  aria-label={ANNIVERSARY_SYMBOL_LABELS[icon] || icon}
+                  onClick={() => {
+                    if (confirm('Bạn chắc chắn muốn xóa kỷ niệm này chứ?')) deleteMutation.mutate();
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-sm font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
                 >
-                  <AnniversarySymbol name={icon} size={19} />
+                  <Trash size={17} />
+                  Xóa
                 </button>
-              ))}
+              )}
             </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Sticker hình dán</label>
-            <div className="mt-2 grid grid-cols-7 gap-2">
-              {STICKERS.map((sticker) => (
-                <button
-                  key={sticker}
-                  type="button"
-                  onClick={() => setEventSticker(sticker)}
-                  className={`grid aspect-square place-items-center rounded-xl border bg-white transition active:scale-95 ${
-                    eventSticker === sticker
-                      ? 'border-pink-400 ring-2 ring-pink-100'
-                      : 'border-slate-200 hover:border-pink-200 hover:bg-pink-50'
-                  }`}
-                  title={ANNIVERSARY_STICKER_LABELS[sticker] || sticker}
-                  aria-label={ANNIVERSARY_STICKER_LABELS[sticker] || sticker}
-                >
-                  <AnniversarySticker name={sticker} size={25} />
-                </button>
-              ))}
+            <div className="flex gap-2 sm:justify-end">
+              <Button type="button" variant="secondary" onClick={onClose}>Hủy</Button>
+              <Button type="submit" loading={saveMutation.isPending}>
+                {existingEvent ? 'Lưu thay đổi' : 'Thêm kỷ niệm'}
+              </Button>
             </div>
-          </div>
-
-          <div className="flex gap-2 pt-4 border-t border-slate-100">
-            <Button
-              type="submit"
-              loading={saveMutation.isPending}
-              className="flex-grow"
-            >
-              {existingEvent ? 'Lưu thay đổi' : 'Thêm kỷ niệm'}
-            </Button>
-            {existingEvent && !isStartDate && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('Bạn chắc chắn muốn xóa kỷ niệm này chứ?')) {
-                    deleteMutation.mutate();
-                  }
-                }}
-                disabled={deleteMutation.isPending}
-                className="flex size-11 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-500 transition hover:border-rose-300 hover:bg-rose-50 disabled:opacity-50"
-                title="Xóa kỷ niệm"
-              >
-                <Trash size={18} />
-              </button>
-            )}
-            <Button type="button" variant="secondary" onClick={onClose}>
-              Hủy
-            </Button>
           </div>
         </form>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { MapTrifold } from '@phosphor-icons/react';
 import { useAuthStore } from '../../store/authStore';
 import { useSubscription } from '../../hooks/useSubscription';
 import api from '../../lib/api';
@@ -54,12 +55,14 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
           { to: '/female-dashboard', label: 'Tổng quan', icon: 'bar_chart' },
           { to: '/cycles', label: 'Chu kỳ', icon: 'calendar_month' },
           { to: '/partner', label: 'Người ấy', icon: 'favorite' },
+          { to: '/couple-map', label: 'Bản đồ', icon: 'map' },
           { to: '/products', label: 'Sản phẩm', icon: 'shopping_bag' },
           { to: notificationSettingsPath, label: 'Cài đặt thông báo', icon: 'notifications_active' },
         ]
       : [
           { to: '/male-dashboard', label: 'Tổng quan', icon: 'bar_chart' },
           { to: '/partner', label: 'Người ấy', icon: 'favorite' },
+          { to: '/couple-map', label: 'Bản đồ', icon: 'map' },
           { to: '/products', label: 'Sản phẩm', icon: 'shopping_bag' },
           { to: notificationSettingsPath, label: 'Cài đặt thông báo', icon: 'notifications_active' },
         ];
@@ -72,6 +75,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
     : [
         { to: user?.gender === 'female' ? '/female-dashboard' : '/male-dashboard', icon: 'bar_chart', label: 'Tổng quan' },
         { to: '/partner', icon: 'favorite', label: 'Người ấy' },
+        { to: '/couple-map', icon: 'map', label: 'Bản đồ hẹn hò' },
         { to: '/products', icon: 'shopping_bag', label: 'Sản phẩm chăm sóc' },
         { to: notificationSettingsPath, icon: 'notifications_active', label: 'Cài đặt thông báo' },
         { to: '/settings', icon: 'manage_accounts', label: 'Hồ sơ cá nhân' },
@@ -95,8 +99,10 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
     setDropOpen(false);
   }, [location.pathname]);
 
+  const isCoupleMap = location.pathname === '/couple-map';
+
   return (
-    <div className="sticky top-4 z-50 flex w-full justify-center px-4">
+    <div className={`${isCoupleMap ? 'absolute' : 'sticky'} top-4 z-50 flex w-full justify-center px-4`}>
       <header className="lp-floating-nav flex w-full max-w-[1100px] items-center justify-between whitespace-nowrap rounded-full px-6 py-3">
         <Link to={loggedIn ? homePath : '/'} className="flex flex-shrink-0 items-center gap-3">
           <HiLogo size={34} />
@@ -114,18 +120,22 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
         </Link>
 
         {loggedIn ? (
-          <nav className="mx-4 hidden flex-1 items-center justify-center gap-1 md:flex">
+          <nav className="mx-3 hidden flex-1 items-center justify-center gap-1 md:flex">
             {dashboardLinks.map(({ to, label, icon }) => {
               const active = location.pathname === to;
               return (
                 <Link
                   key={to}
                   to={to}
-                  className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
                     active ? 'bg-white/80 text-pink-500 shadow-sm' : 'text-slate-500 hover:bg-white/50 hover:text-slate-900'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">{icon}</span>
+                  {icon === 'map' ? (
+                    <MapTrifold size={18} weight={active ? 'fill' : 'bold'} />
+                  ) : (
+                    <span className="material-symbols-outlined text-[18px]">{icon}</span>
+                  )}
                   {label}
                 </Link>
               );
@@ -186,7 +196,11 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
                         to={to}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-pink-50 hover:text-pink-600"
                       >
-                        <span className="material-symbols-outlined text-[18px] text-slate-400">{icon}</span>
+                        {icon === 'map' ? (
+                          <MapTrifold size={18} weight="bold" className="text-slate-400" />
+                        ) : (
+                          <span className="material-symbols-outlined text-[18px] text-slate-400">{icon}</span>
+                        )}
                         {label}
                       </Link>
                     ))}

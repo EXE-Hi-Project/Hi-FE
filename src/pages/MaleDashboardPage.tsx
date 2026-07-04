@@ -159,7 +159,7 @@ export default function MaleDashboardPage() {
                 <span className="material-symbols-outlined text-[20px] text-yellow-500">{greeting.icon}</span>
                 <span>{greeting.text}</span>
               </div>
-              <h1 className="hi-page-title text-4xl md:text-[44px] md:leading-[1.08]">
+              <h1 className="hi-page-title hi-brand-gradient-text text-4xl md:text-[44px] md:leading-[1.08]">
                 Chào {firstName}, cùng chăm sóc dịu dàng hôm nay.
               </h1>
               <p className="mt-3 max-w-2xl text-base font-medium text-slate-500">

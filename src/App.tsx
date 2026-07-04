@@ -20,6 +20,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const SettingsNotificationsPage = lazy(() => import('./pages/SettingsNotificationsPage'));
 const ProductsPage = lazy(() => import('./pages/ProductsPage'));
+const CoupleMapPage = lazy(() => import('./pages/CoupleMapPage'));
 const MaleDashboardPage = lazy(() => import('./pages/MaleDashboardPage'));
 const MaleSettingsNotificationsPage = lazy(() => import('./pages/MaleSettingsNotificationsPage'));
 const PartnerPage = lazy(() => import('./pages/PartnerPage'));
@@ -225,6 +226,7 @@ export default function App() {
         <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
         <Route path="/products" element={<UserOnlyRoute><ProtectedRoute><ProductsPage /></ProtectedRoute></UserOnlyRoute>} />
+        <Route path="/couple-map" element={<UserOnlyRoute><ProtectedRoute><CoupleMapPage /></ProtectedRoute></UserOnlyRoute>} />
         <Route path="/symptoms" element={<ProtectedRoute><SymptomsPage /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

@@ -379,7 +379,7 @@ export default function LandingPage() {
                       </span>
                     )}
                     <div className="mb-6">
-                      <h3 className="bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-2xl font-black text-transparent">{plan.name}</h3>
+                      <h3 className="text-center text-2xl font-black text-slate-900">{plan.name}</h3>
                       <p className="mt-2 min-h-[48px] text-sm font-medium leading-relaxed text-slate-500">{plan.description}</p>
                     </div>
 

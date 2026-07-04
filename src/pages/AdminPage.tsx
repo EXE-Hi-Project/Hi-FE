@@ -1,11 +1,14 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BellRinging,
+  CaretLeft,
+  CaretRight,
   ChartPieSlice,
   Cpu,
   CurrencyCircleDollar,
   List,
+  MapTrifold,
   Pulse,
   Question,
   Storefront,
@@ -28,6 +31,7 @@ const AdminUsersPanel = lazy(() => import('../components/admin/AdminUsersPanel')
 const HealthVideoAdminPanel = lazy(() => import('../components/admin/HealthVideoAdminPanel'));
 const AdminDailyQuestionsPanel = lazy(() => import('../components/admin/AdminDailyQuestionsPanel'));
 const AffiliateAdminPanel = lazy(() => import('../components/admin/AffiliateAdminPanel'));
+const CouplePlacesAdminPanel = lazy(() => import('../components/admin/CouplePlacesAdminPanel'));
 const AdminNotificationsPanel = lazy(() => import('../components/admin/AdminNotificationsPanel'));
 const AdminSystemPanel = lazy(() => import('../components/admin/AdminSystemPanel'));
 
@@ -40,6 +44,7 @@ const NAV_ITEMS = [
   { id: 'videos', label: 'Video sức khỏe', description: 'Nội dung đã duyệt', Icon: VideoCamera },
   { id: 'questions', label: 'Câu hỏi mỗi ngày', description: 'Kho câu hỏi cặp đôi', Icon: Question },
   { id: 'affiliate', label: 'Affiliate', description: 'TikTok và Shopee', Icon: Storefront },
+  { id: 'couplePlaces', label: 'Couple Map', description: 'Địa điểm & report', Icon: MapTrifold },
   { id: 'notifications', label: 'Thông báo', description: 'Chiến dịch vận hành', Icon: BellRinging },
   { id: 'system', label: 'Hệ thống', description: 'Health và cấu hình', Icon: Cpu },
 ] as const;
@@ -62,6 +67,8 @@ function ActivePanel({ tab }: { tab: AdminTab }) {
       return <AdminDailyQuestionsPanel />;
     case 'affiliate':
       return <AffiliateAdminPanel />;
+    case 'couplePlaces':
+      return <CouplePlacesAdminPanel />;
     case 'notifications':
       return <AdminNotificationsPanel />;
     case 'system':
@@ -76,12 +83,9 @@ export default function AdminPage() {
   const logout = useAuthStore((state) => state.logout);
   const [searchParams, setSearchParams] = useSearchParams();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const requestedTab = searchParams.get('tab') as AdminTab | null;
   const activeTab = requestedTab && VALID_TABS.has(requestedTab) ? requestedTab : 'overview';
-  const activeItem = useMemo(
-    () => NAV_ITEMS.find((item) => item.id === activeTab) ?? NAV_ITEMS[0],
-    [activeTab]
-  );
 
   const selectTab = (tab: AdminTab) => {
     setSearchParams(tab === 'overview' ? {} : { tab });
@@ -107,14 +111,16 @@ export default function AdminPage() {
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[264px] flex-col border-r border-slate-200 bg-white transition-transform duration-200 lg:sticky lg:top-0 lg:h-[100dvh] lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[264px] flex-col border-r border-slate-200 bg-white transition-all duration-200 lg:sticky lg:top-0 lg:h-[100dvh] lg:translate-x-0 ${
+          sidebarCollapsed ? 'lg:w-[76px]' : 'lg:w-[264px]'
+        } ${
           mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-20 items-center justify-between border-b border-slate-100 px-5">
-          <div className="flex items-center gap-3">
+        <div className={`flex h-20 items-center justify-between border-b border-slate-100 ${sidebarCollapsed ? 'lg:px-3' : 'px-5'}`}>
+          <div className={`flex min-w-0 items-center gap-3 ${sidebarCollapsed ? 'lg:justify-center' : ''}`}>
             <HiLogo size={36} />
-            <div>
+            <div className={sidebarCollapsed ? 'lg:hidden' : ''}>
               <p
                 className="text-sm font-extrabold"
                 style={{
@@ -129,6 +135,14 @@ export default function AdminPage() {
               <p className="text-xs text-slate-500">Bảng vận hành nội bộ</p>
             </div>
           </div>
+          <button
+            type="button"
+            aria-label={sidebarCollapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
+            className="hidden rounded-xl p-2 text-slate-500 hover:bg-slate-100 lg:inline-flex"
+            onClick={() => setSidebarCollapsed((value) => !value)}
+          >
+            {sidebarCollapsed ? <CaretRight size={18} weight="bold" /> : <CaretLeft size={18} weight="bold" />}
+          </button>
           <button
             type="button"
             aria-label="Đóng menu"
@@ -147,14 +161,17 @@ export default function AdminPage() {
                 key={item.id}
                 type="button"
                 onClick={() => selectTab(item.id)}
+                title={sidebarCollapsed ? item.label : undefined}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors active:scale-[0.99] ${
+                  sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''
+                } ${
                   active
                     ? 'bg-rose-50 text-[#c52d62]'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
                 }`}
               >
                 <item.Icon size={18} weight={active ? 'fill' : 'regular'} className="shrink-0" />
-                <span className="min-w-0">
+                <span className={`min-w-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                   <span className="block truncate text-sm font-bold">{item.label}</span>
                   <span className={`block truncate text-[11px] ${active ? 'text-rose-500' : 'text-slate-400'}`}>
                     {item.description}
@@ -165,13 +182,17 @@ export default function AdminPage() {
           })}
         </nav>
 
-        <div className="border-t border-slate-100 p-4">
+        <div className={`border-t border-slate-100 p-4 ${sidebarCollapsed ? 'lg:px-3' : ''}`}>
           <button
             type="button"
             onClick={signOut}
-            className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50 active:scale-[0.98]"
+            title={sidebarCollapsed ? 'Đăng xuất' : undefined}
+            className={`w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50 active:scale-[0.98] ${
+              sidebarCollapsed ? 'lg:px-0' : ''
+            }`}
           >
-            Đăng xuất
+            <span className={sidebarCollapsed ? 'lg:hidden' : ''}>Đăng xuất</span>
+            <span className={sidebarCollapsed ? 'hidden lg:inline' : 'hidden'}>↗</span>
           </button>
         </div>
       </aside>
@@ -188,7 +209,7 @@ export default function AdminPage() {
           </button>
         )}
 
-        <main className="mx-auto w-full max-w-[1500px] p-4 md:p-6 lg:p-8">
+        <main className={activeTab === 'couplePlaces' ? 'w-full h-screen relative overflow-hidden' : 'mx-auto w-full max-w-[1500px] p-4 md:p-6 lg:p-8'}>
           <Suspense fallback={<AdminPanelSkeleton />}>
             <ActivePanel tab={activeTab} />
           </Suspense>

@@ -347,3 +347,129 @@ export interface CoupleAnniversarySummary {
   options: CoupleAnniversaryOptions;
 }
 
+export type CouplePlaceCategory =
+  | 'FOOD'
+  | 'CAFE'
+  | 'DATE_SPOT'
+  | 'ENTERTAINMENT'
+  | 'CINEMA'
+  | 'PARK'
+  | 'SHOPPING'
+  | 'OTHER';
+
+export type CouplePlaceStatus = 'PUBLISHED' | 'HIDDEN' | 'ARCHIVED';
+export type CouplePlaceSource = 'USER' | 'OSM' | 'GOOGLE' | 'HYBRID';
+export type CouplePlaceVisibility = 'PUBLIC' | 'COUPLE_PRIVATE';
+
+export interface CouplePlaceLocation {
+  lat: number;
+  lng: number;
+  address?: string;
+  city?: string;
+  district?: string;
+}
+
+export interface CouplePlacePhoto {
+  _id: number;
+  placeId: number;
+  userId: string;
+  userName: string;
+  objectKey: string;
+  url: string;
+  contentType: string;
+  status: CouplePlaceStatus;
+  createdAt?: string;
+}
+
+export interface CouplePlaceReview {
+  _id: number;
+  placeId: number;
+  userId: string;
+  userName: string;
+  rating: number;
+  content?: string;
+  status: CouplePlaceStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type CouplePlaceReportStatus = 'OPEN' | 'RESOLVED';
+
+export interface CouplePlaceReport {
+  _id: number;
+  placeId: number;
+  targetType: string;
+  targetId?: number;
+  userId: string;
+  userName: string;
+  reason: string;
+  status: CouplePlaceReportStatus;
+  createdAt?: string;
+}
+
+export interface CouplePlace {
+  _id?: number;
+  name: string;
+  description?: string;
+  category: CouplePlaceCategory;
+  location: CouplePlaceLocation;
+  source: CouplePlaceSource;
+  visibility?: CouplePlaceVisibility;
+  googlePlaceId?: string;
+  googleRating?: number;
+  googleUserRatingCount?: number;
+  googleMapsUri?: string;
+  userRatingAvg?: number;
+  reviewCount?: number;
+  likeCount?: number;
+  dislikeCount?: number;
+  saveCount?: number;
+  reportCount?: number;
+  status: CouplePlaceStatus;
+  createdBy?: string;
+  createdByName?: string;
+  tags?: string[];
+  coverPhotoUrl?: string;
+  distanceMeters?: number;
+  likedByMe?: boolean;
+  dislikedByMe?: boolean;
+  savedByMe?: boolean;
+  ownedByMe?: boolean;
+  photos?: CouplePlacePhoto[];
+  recentReviews?: CouplePlaceReview[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateCouplePlaceDto {
+  name: string;
+  description?: string;
+  category: CouplePlaceCategory;
+  lat: number;
+  lng: number;
+  address?: string;
+  city?: string;
+  district?: string;
+  googlePlaceId?: string;
+  googleRating?: number;
+  googleUserRatingCount?: number;
+  googleMapsUri?: string;
+  tags?: string[];
+  anonymous?: boolean;
+  nickname?: string;
+  visibility?: CouplePlaceVisibility;
+}
+
+export interface AdminCouplePlace extends Omit<CouplePlace, 'location'> {
+  location?: CouplePlaceLocation | null;
+  metadataOnly?: boolean;
+}
+
+export interface AdminCouplePlaceReviewPage {
+  items: CouplePlaceReview[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
