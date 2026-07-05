@@ -1,10 +1,12 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useAuthStore } from '../../store/authStore';
 
 export default function Layout() {
   const { user } = useAuthStore();
+  const location = useLocation();
   const isMale = user?.gender === 'male';
+  const isCoupleMap = location.pathname === '/couple-map';
   const pageBg = isMale ? 'bg-[#f5fbff]' : 'bg-[#fff1f6]';
   const blobs = isMale
     ? {
@@ -27,8 +29,8 @@ export default function Layout() {
       </div>
       <div className="relative z-10 flex min-h-screen flex-col">
         <Navbar />
-        <main className="flex-1 pb-16 pt-6">
-          <div className="mx-auto w-full max-w-[1200px] px-4 md:px-8">
+        <main className={isCoupleMap ? 'flex-1 pb-0 pt-0 flex flex-col h-screen w-screen relative' : 'flex-1 pb-16 pt-6'}>
+          <div className={isCoupleMap ? 'w-full px-0 flex flex-col flex-1 h-full w-full' : 'mx-auto w-full max-w-[1200px] px-4 md:px-8'}>
             <Outlet />
           </div>
         </main>

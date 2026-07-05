@@ -14,6 +14,8 @@ interface PricingPlan {
   id: 'free' | PaidPlanId;
   label: string;
   price: string;
+  basePrice?: string;
+  discountPercent?: number;
   period: string;
   description: string;
   priceId?: PaidPlanId;
@@ -45,6 +47,9 @@ export default function PricingCard() {
       id: 'monthly',
       label: 'Hi Pro',
       price: formatPlanPrice(pricing.hiPro.currentPrice),
+      basePrice: pricing.hiPro.discountPercent > 0 ? formatPlanPrice(pricing.hiPro.basePrice) : undefined,
+      discountPercent: pricing.hiPro.discountPercent,
+      badge: pricing.hiPro.discountPercent > 0 ? `Giảm ${pricing.hiPro.discountPercent}%` : undefined,
       period: '/30 ngày',
       description: 'Phân tích sâu hơn và tăng hạn mức Hi AI.',
       priceId: 'monthly',
@@ -54,6 +59,8 @@ export default function PricingCard() {
       id: 'yearly',
       label: 'Hi Max',
       price: formatPlanPrice(pricing.hiMax.currentPrice),
+      basePrice: pricing.hiMax.discountPercent > 0 ? formatPlanPrice(pricing.hiMax.basePrice) : undefined,
+      discountPercent: pricing.hiMax.discountPercent,
       period: '/365 ngày',
       description: 'Đồng hành trọn năm với mức tiết kiệm tốt hơn.',
       priceId: 'yearly',
@@ -130,6 +137,15 @@ export default function PricingCard() {
 
   return (
     <div id="pricing" className="mx-auto max-w-5xl px-4 py-8">
+      {pricing.activeSale && (
+        <div className="mx-auto mb-6 max-w-3xl rounded-3xl border border-pink-100 bg-gradient-to-r from-pink-50 via-white to-sky-50 p-4 text-center shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-pink-500">Đang áp dụng ưu đãi</p>
+          <h3 className="mt-1 text-xl font-black text-slate-900">{pricing.activeSale.title}</h3>
+          {pricing.activeSale.subtitle ? <p className="mt-1 text-sm font-semibold text-slate-500">{pricing.activeSale.subtitle}</p> : null}
+          <p className="mt-2 text-xs font-bold text-slate-400">Kết thúc: {new Date(pricing.activeSale.endsAt).toLocaleString('vi-VN')}</p>
+        </div>
+      )}
+
       <div className="mx-auto mb-10 max-w-2xl text-center">
         <h2 className="hi-page-title text-3xl sm:text-4xl">
           Lựa chọn Gói <span className="bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-transparent">Đồng Hành</span> cùng Hi
@@ -164,13 +180,14 @@ export default function PricingCard() {
 
               <div>
                 <p className="text-lg font-black text-slate-900">{plan.label}</p>
-                {!isFreePlan && pricing.activeSale ? (
-                  <p className="mt-3 text-sm font-bold text-slate-400 line-through">
-                    {formatPlanPrice(plan.id === 'monthly' ? pricing.hiPro.basePrice : pricing.hiMax.basePrice)}
-                  </p>
+                {plan.basePrice ? (
+                  <div className="mt-3 flex items-center gap-2">
+                    <p className="text-sm font-bold text-slate-400 line-through">{plan.basePrice}</p>
+                    {plan.discountPercent ? <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] font-black text-pink-600">Tiết kiệm {plan.discountPercent}%</span> : null}
+                  </div>
                 ) : null}
                 <div className="mt-4 flex items-baseline text-slate-900">
-                  <span className="text-4xl font-black tracking-tight">{plan.price}</span>
+<span className={`text-4xl font-black tracking-tight ${!isFreePlan && plan.basePrice ? 'bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-transparent' : ''}`}>{plan.price}</span>
                   <span className="ml-1 text-lg font-bold text-slate-400">{plan.period}</span>
                 </div>
                 <p className="mt-3 min-h-10 text-sm font-semibold leading-relaxed text-slate-500">{plan.description}</p>

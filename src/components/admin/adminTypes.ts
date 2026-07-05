@@ -107,5 +107,6 @@ export type AdminTab =
   | 'videos'
   | 'questions'
   | 'affiliate'
+  | 'couplePlaces'
   | 'notifications'
   | 'system';

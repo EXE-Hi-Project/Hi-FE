@@ -280,6 +280,10 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
   const pageSurface = isMale
     ? 'bg-gradient-to-b from-sky-50 via-white to-white'
     : 'bg-gradient-to-b from-pink-50 via-white to-white';
+  const isBacklogQuestion = Boolean(
+    todayQuery.data?.questionDate
+      && todayQuery.data.questionDate.slice(0, 10) < toIsoDate(new Date()),
+  );
 
   const switchView = (view: ViewKey) => {
     setSearchParams(view === 'today' ? {} : { view });
@@ -296,6 +300,27 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
     setAnniversaryModalDate(date);
     setAnniversaryModalEvent(event);
     setIsAnniversaryModalOpen(true);
+  };
+
+  const openStartDateModal = () => {
+    const startDate = anniversariesQuery.data?.startDate;
+    if (startDate) {
+      openAnniversaryModal(startDate.eventDate.slice(0, 10), startDate);
+      return;
+    }
+
+    const today = toIsoDate(new Date());
+    openAnniversaryModal(today, {
+      _id: '',
+      type: 'START_DATE',
+      eventDate: today,
+      title: 'Ngày bên nhau',
+      note: '',
+      color: 'pink',
+      effect: 'sparkle',
+      icon: 'favorite',
+      sticker: 'heart',
+    } as CoupleAnniversaryEvent);
   };
 
   // Reading this as: Couple features dashboard for couples interested in health and relationships, with a calm, intimate, and modern vibe language, leaning toward custom Tailwind theme + delicate cards split + smooth spring physics motion.
@@ -396,6 +421,12 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs font-black uppercase tracking-wider text-slate-400">{dateLabel(todayQuery.data.questionDate)}</p>
                     <div className="flex items-center gap-2">
+                      {isBacklogQuestion && (
+                        <span className="flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-50 px-3.5 py-1 text-xs font-bold text-amber-700">
+                          <Clock size={13} weight="bold" />
+                          Câu hỏi còn dang dở
+                        </span>
+                      )}
                       <span className={`rounded-full px-3.5 py-1 text-xs font-bold border ${
                         isMale ? 'bg-blue-50/80 text-blue-600 border-blue-100/60' : 'bg-pink-50/80 text-pink-600 border-pink-100/60'
                       }`}>
@@ -423,7 +454,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                       <span className="grid size-7 place-items-center rounded-full bg-violet-500 text-[10px] text-white">{partnerName.trim().charAt(0).toUpperCase() || 'N'}</span>
                       <span className="ml-1">Bạn và {partnerName}</span>
                     </div>
-                    <h2 className="mt-4 text-2xl font-black leading-snug text-slate-900 md:text-4xl md:leading-normal" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+                    <h2 className="mt-4 text-3xl font-normal italic leading-tight text-slate-900 md:text-5xl md:leading-tight">
                       {todayQuery.data.questionText}
                     </h2>
                   </div>
@@ -592,27 +623,15 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
             )}
           </section>
         ) : (
-          <div className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]" style={{ contentVisibility: 'auto', containIntrinsicSize: '760px' }}>
-            <section className={`rounded-[2rem] border bg-white/95 p-5 md:p-6 shadow-[0_16px_48px_rgba(148,163,184,0.08)] transition-all duration-300 ${
+          <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.05fr_0.95fr]" style={{ contentVisibility: 'auto', containIntrinsicSize: '760px' }}>
+            <section className={`rounded-2xl border bg-white p-5 shadow-sm md:p-6 ${
               isMale ? 'border-blue-100/60' : 'border-pink-100/60'
             }`}>
-              <div className="flex flex-col gap-3 px-2 pb-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="px-1 pb-4">
                 <div>
-                  <h2 className="text-xl font-black text-slate-900" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>Kỷ niệm & câu hỏi</h2>
-                  <p className="mt-1.5 text-sm font-semibold text-slate-400">Chọn ngày để xem kỷ niệm, câu hỏi và chỉnh sửa câu trả lời.</p>
+                  <h2 className="text-xl font-black text-slate-900">Kỷ niệm & câu hỏi</h2>
+                  <p className="mt-1.5 text-sm font-semibold text-slate-500">Chọn ngày để xem kỷ niệm, câu hỏi và chỉnh sửa câu trả lời.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openAnniversaryModal(selectedHistoryDate ?? toIsoDate(new Date()))}
-                  className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black transition active:scale-95 ${
-                    isMale
-                      ? 'border-blue-100 bg-blue-50 text-blue-600 hover:bg-blue-100'
-                      : 'border-pink-100 bg-pink-50 text-pink-600 hover:bg-pink-100'
-                  }`}
-                >
-                  <Plus size={15} weight="bold" />
-                  Thêm kỷ niệm
-                </button>
               </div>
               {historyQuery.isLoading || anniversariesQuery.isLoading ? (
                 <QuestionSkeleton />
@@ -620,6 +639,43 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                 <p className="px-2 py-10 text-center text-sm font-bold text-rose-600">Không tải được lịch chung lúc này.</p>
               ) : (
                 <div className="space-y-4">
+                  <div className="grid gap-4 border-y border-slate-100 py-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${accentSoft}`}>
+                        <Heart size={21} weight="fill" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-extrabold text-slate-500">
+                          {anniversariesQuery.data?.startDate?.title || 'Ngày bên nhau'}
+                        </p>
+                        <p className="mt-0.5 text-2xl font-black leading-none text-slate-900">
+                          {anniversariesQuery.data?.daysTogether ?? '—'}{' '}
+                          <span className="text-sm font-extrabold text-slate-600">ngày</span>
+                        </p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                          {anniversariesQuery.data?.startDate
+                            ? `Từ ${new Date(`${anniversariesQuery.data.startDate.eventDate.slice(0, 10)}T00:00:00`).toLocaleDateString('vi-VN')}`
+                            : 'Chưa chọn ngày bắt đầu'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid gap-2 min-[420px]:grid-cols-2">
+                      <Button type="button" variant="secondary" size="sm" onClick={openStartDateModal} className="w-full justify-center whitespace-nowrap">
+                        <PencilSimple size={14} className="mr-1.5" />
+                        {anniversariesQuery.data?.startDate ? 'Chỉnh ngày bên nhau' : 'Chọn ngày bên nhau'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => openAnniversaryModal(selectedHistoryDate ?? toIsoDate(new Date()))}
+                        className="w-full justify-center whitespace-nowrap"
+                      >
+                        <Plus size={14} className="mr-1.5" weight="bold" />
+                        Thêm kỷ niệm
+                      </Button>
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-3 py-1.5">
                     <button
                       type="button"
@@ -651,7 +707,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                   <div className="grid grid-cols-7 gap-1.5">
                     {calendarDays.map((day) => {
                       if (!day.inCurrentMonth) {
-                        return <span key={day.iso} className="min-h-[34px] sm:min-h-10" />;
+                        return <span key={day.iso} className="aspect-square min-h-11 sm:min-h-14" />;
                       }
                       const question = questionsByDate.get(day.iso);
                       const selected = selectedHistoryDate === day.iso;
@@ -674,7 +730,8 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                           setSelectedQuestion(question ?? null);
                           setIsEditingHistory(false);
                         }}
-                        className={`group relative isolate flex aspect-square min-h-[42px] flex-col items-center justify-center overflow-visible rounded-xl border p-1 text-xs sm:min-h-12 sm:text-sm font-black transition active:scale-[0.98] ${
+                        aria-label={`${day.label} ${monthLabel(visibleMonth)}${decorated ? `, ${primaryOccurrence.event.title}` : ''}${question ? `, ${question.questionText}` : ''}`}
+                        className={`group relative isolate flex aspect-square min-h-11 flex-col items-center justify-center overflow-visible rounded-xl border p-1 text-xs font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 active:scale-[0.98] sm:min-h-14 sm:text-sm ${
                           selected
                             ? isMale
                               ? 'bg-blue-50/90 text-blue-600 ring-2 ring-blue-300 ring-offset-1'
@@ -684,7 +741,13 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                               : 'border-slate-100 bg-slate-50/70 text-slate-700 hover:bg-white hover:shadow-sm'
                         }`}
                       >
-                        <span className={day.isToday ? 'rounded-lg bg-slate-900 px-1.5 py-0.5 text-white text-[11px]' : 'relative z-10'}>{day.label}</span>
+                        <span className={day.isToday
+                          ? `relative z-10 rounded-md border px-1.5 py-0.5 text-[11px] ${
+                              isMale
+                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border-pink-200 bg-pink-50 text-pink-700'
+                            }`
+                          : 'relative z-10'}>{day.label}</span>
                         <div className="relative z-10 mt-1 flex h-4 items-center justify-center gap-1">
                           {decorated && (
                             <AnniversarySymbol name={primaryOccurrence.event.icon} size={14} className="anniversary-icon text-current" />
@@ -725,7 +788,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
               )}
             </section>
 
-            <section className={`rounded-[2rem] border bg-white/95 p-6 shadow-[0_16px_48px_rgba(148,163,184,0.08)] transition-all duration-300 ${
+            <section className={`rounded-2xl border bg-white p-6 shadow-sm ${
               isMale ? 'border-blue-100/60' : 'border-pink-100/60'
             }`}>
               {!selectedQuestion && selectedAnniversaryOccurrences.length === 0 ? (
@@ -782,7 +845,7 @@ export default function PartnerHubPage({ variant }: { variant: Variant }) {
                     </div>
                   )}
                   {selectedQuestion && (
-                    <h2 className="mt-5 text-xl md:text-2xl font-black leading-snug text-slate-900" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+                    <h2 className="mt-5 text-[28px] font-normal italic leading-snug text-slate-900">
                       {selectedQuestion.questionText}
                     </h2>
                   )}
