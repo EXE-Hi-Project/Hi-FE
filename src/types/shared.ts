@@ -435,6 +435,7 @@ export interface CouplePlace {
   dislikedByMe?: boolean;
   savedByMe?: boolean;
   ownedByMe?: boolean;
+  reviewedByMe?: boolean;
   photos?: CouplePlacePhoto[];
   recentReviews?: CouplePlaceReview[];
   createdAt?: string;

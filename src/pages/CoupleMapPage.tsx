@@ -24,11 +24,12 @@ import {
   X,
 } from '@phosphor-icons/react';
 import api from '../lib/api';
+import { getUserFacingError } from '../lib/userFacingError';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
 import { useAuthStore } from '../store/authStore';
 import { PLACE_CATEGORY_META, PLACE_CATEGORY_ORDER } from '../components/couple-map/placeCategoryMeta';
-import type { CouplePlace, CouplePlaceCategory, CouplePlaceVisibility, CreateCouplePlaceDto } from '../types/shared';
+import type { CouplePlace, CouplePlaceCategory, CouplePlaceReview, CouplePlaceVisibility, CreateCouplePlaceDto } from '../types/shared';
 
 type LatLng = { lat: number; lng: number };
 type MapBounds = { north: number; south: number; east: number; west: number };
@@ -591,7 +592,7 @@ function PlaceDetail({
   onLike: () => void;
   onDislike: () => void;
   onSave: () => void;
-  onReview: (rating: number, content: string, identityMode: IdentityMode, nickname: string) => void;
+  onReview: (rating: number, content: string, identityMode: IdentityMode, nickname: string) => Promise<void>;
   onReport: (reason: string) => void;
   busy: boolean;
   userPosition: LatLng | null;
@@ -604,6 +605,7 @@ function PlaceDetail({
   const [activePanel, setActivePanel] = useState<DetailPanel>(null);
   const isPersisted = !!place._id;
   const currentRating = ratingOf(place);
+  const reviews = place.recentReviews ?? [];
   const categoryMeta = CATEGORY_MARKER[place.category] ?? CATEGORY_MARKER.OTHER;
   const distanceFromUser = place.distanceMeters ?? distanceMetersBetween(userPosition, place.location);
 
@@ -680,11 +682,13 @@ function PlaceDetail({
               ['review', 'Viết review', Star],
               ['report', 'Báo cáo', Flag],
             ] as Array<[Exclude<DetailPanel, null>, string, typeof Star]>).map(([panel, label, Icon]) => (
-              <button key={panel} type="button" title={label} aria-label={label} onClick={() => setActivePanel((current) => current === panel ? null : panel)} className={`inline-flex h-10 items-center justify-center rounded-xl border transition-colors ${activePanel === panel ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-100 bg-white text-slate-500 hover:bg-slate-50'}`}>
+              <button key={panel} type="button" disabled={panel === 'review' && place.reviewedByMe} title={panel === 'review' && place.reviewedByMe ? 'Bạn đã review địa điểm này' : label} aria-label={label} onClick={() => setActivePanel((current) => current === panel ? null : panel)} className={`inline-flex h-10 items-center justify-center rounded-xl border transition-colors disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300 ${activePanel === panel ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-100 bg-white text-slate-500 hover:bg-slate-50'}`}>
                 <Icon size={18} weight={activePanel === panel ? 'fill' : 'bold'} />
               </button>
             ))}
           </div>
+
+          {place.reviewedByMe ? <p className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-center text-xs font-bold text-emerald-700">Bạn đã review địa điểm này.</p> : null}
 
           {activePanel === 'review' ? <div className="mt-3 rounded-xl bg-slate-50 p-2.5">
             <p className="text-sm font-black text-slate-900">Viết review</p>
@@ -708,11 +712,50 @@ function PlaceDetail({
               className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white p-3 text-sm font-medium outline-none focus:border-rose-300"
               placeholder="Điều bạn thích ở địa điểm này..."
             />
-            <Button size="sm" className="mt-2 w-full" disabled={busy || (identityMode === 'nickname' && !nickname.trim())} onClick={() => onReview(rating, content, identityMode, nickname)}>
-              Gửi review
+            <Button
+              size="sm"
+              className="mt-2 w-full"
+              disabled={busy || (identityMode === 'nickname' && !nickname.trim())}
+              onClick={async () => {
+                try {
+                  await onReview(rating, content, identityMode, nickname);
+                  setContent('');
+                  setNickname('');
+                  setActivePanel(null);
+                } catch {
+                  // Keep the draft open so the user can retry.
+                }
+              }}
+            >
+              {busy ? 'Đang gửi...' : 'Gửi review'}
             </Button>
-            {(place.recentReviews ?? []).length > 0 ? <div className="mt-3 space-y-1.5">{(place.recentReviews ?? []).slice(0, 2).map((review) => <div key={review._id} className="rounded-lg bg-white p-2"><div className="flex items-center justify-between"><p className="text-xs font-black text-slate-800">{review.userName}</p><span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-500"><Star size={11} weight="fill" />{review.rating}</span></div>{review.content ? <p className="mt-1 text-xs font-medium text-slate-600">{review.content}</p> : null}</div>)}</div> : null}
           </div> : null}
+
+          <section className="mt-3 border-t border-slate-100 pt-3" aria-label="Đánh giá địa điểm">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-black text-slate-900">Review từ cộng đồng</h3>
+              <span className="text-xs font-bold text-slate-400">{place.reviewCount ?? reviews.length} đánh giá</span>
+            </div>
+            {reviews.length > 0 ? (
+              <div className="mt-2 space-y-2">
+                {reviews.slice(0, 4).map((review) => (
+                  <article key={review._id} className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="truncate text-xs font-black text-slate-800">{review.userName}</p>
+                      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-black text-amber-500">
+                        <Star size={11} weight="fill" />{review.rating}
+                      </span>
+                    </div>
+                    {review.content ? <p className="mt-1 text-xs font-medium leading-5 text-slate-600">{review.content}</p> : null}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-2 rounded-xl bg-slate-50 px-3 py-4 text-center text-xs font-semibold text-slate-500">
+                Chưa có review. Hãy chia sẻ trải nghiệm đầu tiên.
+              </div>
+            )}
+          </section>
 
           {activePanel === 'report' ? <div className="mt-3 rounded-xl border border-slate-100 p-2.5">
             <div className="flex items-center gap-2 text-xs font-black text-slate-500">
@@ -833,8 +876,8 @@ function CreatePlaceModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/40 p-3 backdrop-blur-sm md:items-center">
-      <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/40 p-3 pt-[104px] backdrop-blur-sm md:items-start">
+      <div className="max-h-[calc(100dvh-7.25rem)] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-3.5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-black text-slate-950">Thêm địa điểm yêu thích</h2>
@@ -880,8 +923,8 @@ function CreatePlaceModal({
             </div>
             {identityMode === 'nickname' ? <input value={nickname} onChange={(event) => setNickname(event.target.value)} maxLength={40} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-rose-300" placeholder={visibility === 'PUBLIC' ? 'Biệt danh sẽ hiển thị công khai' : 'Biệt danh sẽ hiển thị với Người ấy'} /> : null}
           </div>
-          <div className="grid grid-cols-[64px_1fr] items-start gap-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-2">
-            <p className="px-1 pt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Danh mục</p>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-2.5">
+            <p className="px-1 pb-2 text-xs font-black text-slate-700">Danh mục</p>
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
               {FORM_CATEGORIES.map(({ id, label, Icon }) => {
                 const active = category === id;
@@ -890,20 +933,20 @@ function CreatePlaceModal({
                     key={id}
                     type="button"
                     onClick={() => setCategory(id)}
-                    className={`flex h-9 items-center justify-center gap-1 rounded-lg border px-1.5 text-[10px] font-black transition-all ${
+                    className={`flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-black leading-tight transition-all ${
                       active
                         ? 'border-rose-200 bg-white text-rose-600 shadow-sm shadow-rose-100'
                         : 'border-white bg-white/70 text-slate-500 hover:border-rose-100 hover:text-rose-500'
                     }`}
                   >
                     <Icon size={15} weight={active ? 'fill' : 'bold'} />
-                    <span className="truncate">{label}</span>
+                    <span className="min-w-0 text-center">{label}</span>
                   </button>
                 );
               })}
             </div>
           </div>
-          <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-rose-300" placeholder="Lý do các cặp đôi nên đến đây..." />
+          <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={2} className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-rose-300" placeholder="Lý do các cặp đôi nên đến đây..." />
         </div>
         <Button className="mt-3 w-full" disabled={busy || !name.trim() || (identityMode === 'nickname' && !nickname.trim())} onClick={() => onSubmit({ name, description, category, address, lat: formPosition.lat, lng: formPosition.lng, anonymous: identityMode === 'anonymous', nickname: identityMode === 'nickname' ? nickname.trim() : undefined, visibility })}>
           {visibility === 'PUBLIC' ? 'Đăng lên bản đồ' : 'Lưu cho hai người'}
@@ -1022,12 +1065,24 @@ export default function CoupleMapPage() {
   });
 
   const reviewMutation = useMutation({
-    mutationFn: ({ id, rating, content, identityMode, nickname }: { id: number; rating: number; content: string; identityMode: IdentityMode; nickname: string }) => api.post(`/couple-places/${id}/reviews`, { rating, content, anonymous: identityMode === 'anonymous', nickname: identityMode === 'nickname' ? nickname.trim() : undefined }).then((r) => r.data.review),
-    onSuccess: () => {
+    mutationFn: ({ id, rating, content, identityMode, nickname }: { id: number; rating: number; content: string; identityMode: IdentityMode; nickname: string }) => api.post(`/couple-places/${id}/reviews`, { rating, content, anonymous: identityMode === 'anonymous', nickname: identityMode === 'nickname' ? nickname.trim() : undefined }).then((r) => r.data.review as CouplePlaceReview),
+    onSuccess: (review, variables) => {
+      queryClient.setQueryData<CouplePlace>(['couple-place', variables.id], (current) => {
+        if (!current) return current;
+        const previousCount = current.reviewCount ?? 0;
+        const previousAverage = current.userRatingAvg ?? 0;
+        return {
+          ...current,
+          reviewCount: previousCount + 1,
+          recentReviews: [review, ...(current.recentReviews ?? [])],
+          userRatingAvg: ((previousAverage * previousCount) + review.rating) / (previousCount + 1),
+          reviewedByMe: true,
+        };
+      });
       toast.success('Đã gửi review');
       invalidate();
     },
-    onError: () => toast.error('Không gửi được review'),
+    onError: (error) => toast.error(getUserFacingError(error, 'Không gửi được review')),
   });
 
   const reportMutation = useMutation({
@@ -1359,7 +1414,10 @@ export default function CoupleMapPage() {
           onLike={() => detailPlace._id && reactionMutation.mutate({ id: detailPlace._id, type: 'like', active: !detailPlace.likedByMe })}
           onDislike={() => detailPlace._id && reactionMutation.mutate({ id: detailPlace._id, type: 'dislike', active: !detailPlace.dislikedByMe })}
           onSave={() => detailPlace._id && reactionMutation.mutate({ id: detailPlace._id, type: 'save', active: !detailPlace.savedByMe })}
-          onReview={(rating, content, identityMode, nickname) => detailPlace._id && reviewMutation.mutate({ id: detailPlace._id, rating, content, identityMode, nickname })}
+          onReview={async (rating, content, identityMode, nickname) => {
+            if (!detailPlace._id) return;
+            await reviewMutation.mutateAsync({ id: detailPlace._id, rating, content, identityMode, nickname });
+          }}
           onReport={(reason) => detailPlace._id && reportMutation.mutate({ id: detailPlace._id, reason })}
           busy={busy}
           userPosition={userPosition}
