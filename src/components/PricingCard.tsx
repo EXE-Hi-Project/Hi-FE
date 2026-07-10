@@ -1,12 +1,12 @@
-import { useCancelSubscription, useCheckout, useSubscription } from '../hooks/useSubscription';
+import { CalendarBlank, CheckCircle, CrownSimple } from '@phosphor-icons/react';
 import {
   FREE_PLAN_FEATURES,
   PREMIUM_PLAN_FEATURES,
   PREMIUM_YEARLY_FEATURES,
 } from '../config/subscriptionPlans';
-import Spinner from './ui/Spinner';
-import { CalendarBlank, CheckCircle, CrownSimple } from '@phosphor-icons/react';
+import { useCancelSubscription, useCheckout, useSubscription } from '../hooks/useSubscription';
 import { FALLBACK_PRICING, formatPlanPrice, usePlanPricing } from '../hooks/usePlanPricing';
+import Spinner from './ui/Spinner';
 
 type PaidPlanId = 'monthly' | 'yearly';
 
@@ -33,6 +33,7 @@ export default function PricingCard() {
   const isPremium = subscription?.tier === 'PREMIUM';
   const isCanceled = subscription?.status === 'canceled';
   const currentPeriodEnd = subscription?.currentPeriodEnd;
+  const sharedFromPartner = subscription?.sharedFromPartner === true;
 
   const plans: PricingPlan[] = [
     {
@@ -51,7 +52,7 @@ export default function PricingCard() {
       discountPercent: pricing.hiPro.discountPercent,
       badge: pricing.hiPro.discountPercent > 0 ? `Giảm ${pricing.hiPro.discountPercent}%` : undefined,
       period: '/30 ngày',
-      description: 'Phân tích sâu hơn và tăng hạn mức Hi AI.',
+      description: 'Một người mua, cả hai cùng dùng AI và phân tích nâng cao.',
       priceId: 'monthly',
       features: [...PREMIUM_PLAN_FEATURES],
     },
@@ -62,7 +63,7 @@ export default function PricingCard() {
       basePrice: pricing.hiMax.discountPercent > 0 ? formatPlanPrice(pricing.hiMax.basePrice) : undefined,
       discountPercent: pricing.hiMax.discountPercent,
       period: '/365 ngày',
-      description: 'Đồng hành trọn năm với mức tiết kiệm tốt hơn.',
+      description: 'Một người mua, cả hai dùng trọn năm với giá tiết kiệm.',
       priceId: 'yearly',
       highlight: true,
       badge: pricing.hiMax.discountPercent > 0 ? `Giảm ${pricing.hiMax.discountPercent}%` : 'Tiết kiệm dài hạn',
@@ -82,7 +83,7 @@ export default function PricingCard() {
     const planName = subscription?.plan === 'PREMIUM_YEARLY' ? 'Hi Max' : 'Hi Pro';
 
     return (
-      <section className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm sm:p-6">
+      <section id="pricing" className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
             <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-pink-50 text-pink-600">
@@ -95,8 +96,17 @@ export default function PricingCard() {
                   <CheckCircle size={13} weight="fill" />
                   Đã kích hoạt
                 </span>
+                {sharedFromPartner && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700">
+                    Dùng chung
+                  </span>
+                )}
               </div>
-              <p className="mt-1 text-sm font-medium text-slate-500">{planName} đang mở khóa toàn bộ quyền lợi trên tài khoản này.</p>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                {sharedFromPartner
+                  ? `${planName} đang được dùng chung từ Người ấy.`
+                  : `${planName} đang mở khóa toàn bộ quyền lợi trên tài khoản này.`}
+              </p>
             </div>
           </div>
 
@@ -113,7 +123,11 @@ export default function PricingCard() {
               </div>
             )}
 
-            {subscription?.cancelAtPeriodEnd ? (
+            {sharedFromPartner ? (
+              <p className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700">
+                Chủ gói là Người ấy
+              </p>
+            ) : subscription?.cancelAtPeriodEnd ? (
               <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
                 Đã dừng gia hạn
               </p>
@@ -151,7 +165,7 @@ export default function PricingCard() {
           Lựa chọn Gói <span className="bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-transparent">Đồng Hành</span> cùng Hi
         </h2>
         <p className="mt-4 text-base font-semibold leading-relaxed text-slate-500">
-          Bắt đầu miễn phí hoặc mở khóa thêm phân tích sức khỏe, AI hỗ trợ tham khảo và trải nghiệm Người ấy nâng cao.
+          Chỉ cần một người trong cặp đôi mua Hi Pro hoặc Hi Max, cả hai cùng dùng quyền lợi Premium.
         </p>
         {isCanceled && (
           <p className="mt-3 text-sm font-bold text-pink-600">
@@ -168,7 +182,7 @@ export default function PricingCard() {
               key={plan.id}
               className={`relative flex flex-col justify-between rounded-[2rem] border bg-white p-7 transition-all duration-300 hover:-translate-y-1 ${
                 plan.highlight
-                  ? 'border-pink-300 shadow-xl shadow-pink-100/60 lg:scale-[1.03] lg:z-10'
+                  ? 'border-pink-300 shadow-xl shadow-pink-100/60 lg:z-10 lg:scale-[1.03]'
                   : 'border-slate-200 hover:border-pink-200 hover:shadow-lg hover:shadow-slate-100'
               }`}
             >
@@ -187,7 +201,7 @@ export default function PricingCard() {
                   </div>
                 ) : null}
                 <div className="mt-4 flex items-baseline text-slate-900">
-<span className={`text-4xl font-black tracking-tight ${!isFreePlan && plan.basePrice ? 'bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-transparent' : ''}`}>{plan.price}</span>
+                  <span className={`text-4xl font-black tracking-tight ${!isFreePlan && plan.basePrice ? 'bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-transparent' : ''}`}>{plan.price}</span>
                   <span className="ml-1 text-lg font-bold text-slate-400">{plan.period}</span>
                 </div>
                 <p className="mt-3 min-h-10 text-sm font-semibold leading-relaxed text-slate-500">{plan.description}</p>

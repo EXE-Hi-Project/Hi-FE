@@ -11,6 +11,7 @@ export interface SubscriptionInfo {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   couplePremium: boolean;
+  sharedFromPartner: boolean;
   entitlements: SubscriptionEntitlements;
   aiUsage: AiUsage;
 }
@@ -71,6 +72,7 @@ export function usePaymentHistory() {
 }
 
 export function useCheckout() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (planType: 'monthly' | 'yearly') =>
       api.post('/payments/create-checkout-session', { 
@@ -78,6 +80,13 @@ export function useCheckout() {
         origin: window.location.origin
       }).then((r) => r.data.data),
     onSuccess: (data) => {
+      if (data.activated) {
+        toast.success('Da kich hoat goi Hi thanh cong');
+        queryClient.invalidateQueries({ queryKey: ['subscription'] });
+        queryClient.invalidateQueries({ queryKey: ['paymentHistory'] });
+        queryClient.invalidateQueries({ queryKey: ['plan-pricing'] });
+        return;
+      }
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       } else {

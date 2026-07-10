@@ -350,7 +350,7 @@ export default function MaleDashboardPage() {
                     compact
                     accent="blue"
                     title="Mở phân tích chuyên sâu của Người ấy"
-                    description="Khi một trong hai có Hi Pro hoặc Hi Max, cả hai xem được điểm ổn định, độ tin cậy và xu hướng chu kỳ."
+                    description="Một người trong cặp đôi mua Hi Pro hoặc Hi Max, cả hai cùng dùng phân tích nâng cao."
                   />
                 </div>
               )}
