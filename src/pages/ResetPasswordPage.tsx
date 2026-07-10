@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import HiLogo from '../components/ui/HiLogo';
+import { getUserFacingError } from '../lib/userFacingError';
 
 const schema = z.object({
   newPassword: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
@@ -38,10 +39,7 @@ export default function ResetPasswordPage() {
       toast.success(data?.message || 'Đặt lại mật khẩu thành công');
       navigate('/login', { replace: true });
     } catch (error: unknown) {
-      const message = typeof error === 'object' && error !== null && 'response' in error
-        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-        : undefined;
-      toast.error(message || 'Không thể đặt lại mật khẩu');
+      toast.error(getUserFacingError(error, 'Không thể đặt lại mật khẩu'));
     } finally {
       setIsSubmitting(false);
     }
@@ -74,7 +72,7 @@ export default function ResetPasswordPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form data-guide="auth-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-800">Mật khẩu mới</label>
               <div className="relative">

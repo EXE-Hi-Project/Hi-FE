@@ -36,7 +36,7 @@ export function getSafeNextPath(search: string, fallback: string) {
 export function buildGoogleOAuthUrl(nextPath?: string) {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   if (!clientId) {
-    throw new Error('Thieu VITE_GOOGLE_CLIENT_ID');
+    throw new Error('Đăng nhập Google đang tạm thời chưa được cấu hình. Vui lòng thử lại sau.');
   }
 
   const tx: OAuthTransaction = {

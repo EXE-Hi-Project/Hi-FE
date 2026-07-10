@@ -5,10 +5,6 @@ import { buildLoginRedirect, clearAuthSession } from './session';
 const productionApiUrl = 'https://api.hilover.space/api';
 const apiBaseUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? productionApiUrl : '/api');
 
-if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
-  console.warn(`VITE_API_URL is missing; falling back to ${productionApiUrl}`);
-}
-
 const api = axios.create({
   baseURL: apiBaseUrl,
   headers: { 'Content-Type': 'application/json' },

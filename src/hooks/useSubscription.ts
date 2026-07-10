@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import { getUserFacingError } from '../lib/userFacingError';
 
 export interface SubscriptionInfo {
   plan: 'FREE' | 'PREMIUM_MONTHLY' | 'PREMIUM_YEARLY';
@@ -94,9 +95,7 @@ export function useCheckout() {
       }
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Có lỗi xảy ra khi tạo phiên thanh toán';
-      toast.error(msg);
-      console.error('Checkout error:', error);
+      toast.error(getUserFacingError(error, 'Có lỗi xảy ra khi tạo phiên thanh toán'));
     },
   });
 }
@@ -111,9 +110,7 @@ export function useCancelSubscription() {
       queryClient.invalidateQueries({ queryKey: ['paymentHistory'] });
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Có lỗi xảy ra khi hủy subscription';
-      toast.error(msg);
-      console.error('Cancel subscription error:', error);
+      toast.error(getUserFacingError(error, 'Có lỗi xảy ra khi hủy subscription'));
     },
   });
 }

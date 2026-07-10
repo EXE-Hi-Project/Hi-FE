@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AxiosError } from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash, X } from '@phosphor-icons/react';
 import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
+import { getUserFacingError } from '../../lib/userFacingError';
 import type {
   CoupleAnniversaryColor,
   CoupleAnniversaryEffect,
@@ -146,8 +146,8 @@ export default function AnniversaryEventModal({
       toast.success(existingEvent ? 'Đã lưu thay đổi' : 'Đã thêm kỷ niệm mới');
       onClose();
     },
-    onError: (error: AxiosError<{ message?: string }>) => {
-      toast.error(error.response?.data?.message || 'Không thể lưu kỷ niệm');
+    onError: (error: unknown) => {
+      toast.error(getUserFacingError(error, 'Không thể lưu kỷ niệm'));
     },
   });
 

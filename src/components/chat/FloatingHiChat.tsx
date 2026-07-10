@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AxiosError } from 'axios';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../lib/api';
+import { getUserFacingError } from '../../lib/userFacingError';
 import { ChatMessage } from '../../types';
 import { useSubscription, type AiUsage } from '../../hooks/useSubscription';
 import { ChatMessageContent } from './ChatMessageContent';
@@ -278,8 +278,7 @@ export default function FloatingHiChat() {
               )}
               {sendMutation.isError && (
                 <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
-                  {(sendMutation.error as AxiosError<{ message?: string }>)?.response?.data?.message
-                    || 'Hi AI chưa gửi được câu trả lời. Vui lòng thử lại.'}
+                  {getUserFacingError(sendMutation.error, 'Hi AI chưa gửi được câu trả lời. Vui lòng thử lại.')}
                 </div>
               )}
               <div ref={bottomRef} />

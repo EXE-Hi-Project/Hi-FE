@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import { ApiResponse, User } from '../types';
 import { useAuthStore } from '../store/authStore';
+import { getUserFacingError } from '../lib/userFacingError';
 
 type UserApiResponse = ApiResponse<{ user: User }> & { user?: User };
 
@@ -15,11 +16,7 @@ function unwrapUser(response: UserApiResponse): User {
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
-  if (typeof error === 'object' && error && 'response' in error) {
-    const response = (error as { response?: { data?: { message?: string } } }).response;
-    return response?.data?.message ?? fallback;
-  }
-  return fallback;
+  return getUserFacingError(error, fallback);
 }
 
 export function usePartnerConnection() {

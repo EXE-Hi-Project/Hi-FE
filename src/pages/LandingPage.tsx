@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import HiLogo from '../components/ui/HiLogo';
 import Navbar from '../components/layout/Navbar';
@@ -22,6 +24,8 @@ const HERO_AVATARS = [
 
 const HERO_IMAGE_PRIORITY = { fetchpriority: 'high' } as Record<string, string>;
 const BRAND_GRADIENT_TEXT = 'bg-gradient-to-r from-sky-400 via-violet-400 to-pink-400 bg-clip-text text-transparent';
+const FEATURE_TRANSITION = { type: 'spring' as const, stiffness: 260, damping: 30 };
+const FEATURE_AUTO_ADVANCE_MS = 5000;
 
 type FeatureVisual =
   | 'cycle'
@@ -163,7 +167,7 @@ const LANDING_PLANS = [
   },
 ];
 
-function FeatureMockup({ type }: { type: FeatureVisual }) {
+export function FeatureMockup({ type }: { type: FeatureVisual }) {
   switch (type) {
     case 'cycle':
       return (
@@ -295,18 +299,364 @@ function FeatureMockup({ type }: { type: FeatureVisual }) {
   }
 }
 
-function FeatureShowcaseCard({ feature }: { feature: (typeof FEATURE_SHOWCASES)[number] }) {
-  return (
-    <div className={`group flex min-h-[360px] flex-col overflow-hidden rounded-[2rem] border p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-100 bento-card-hover animate-fade-in-up ${feature.cardClass} ${feature.delay}`}>
-      <div className={`relative h-44 overflow-hidden rounded-[1.5rem] bg-gradient-to-br ${feature.visualClass}`}>
-        <FeatureMockup type={feature.visual} />
-      </div>
-      <div className="flex flex-1 flex-col gap-3 px-2 pt-5">
-        <div className={`grid h-11 w-11 place-items-center rounded-2xl bg-white shadow-sm ${feature.iconClass}`}>
-          <span className="material-symbols-outlined text-[26px]">{feature.icon}</span>
+function FeatureProductSnapshot({ type }: { type: FeatureVisual }) {
+  switch (type) {
+    case 'cycle':
+      return (
+        <div className="flex h-full flex-col gap-4 p-4">
+          <div className="flex items-start justify-between rounded-3xl bg-white/90 p-4 shadow-sm">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-pink-400">Lịch chu kỳ</p>
+              <p className="mt-1 text-lg font-black text-slate-900">Tháng 7, 2026</p>
+              <p className="mt-1 text-xs font-bold text-slate-400">Dự đoán chỉ mang tính tham khảo</p>
+            </div>
+            <span className="rounded-2xl bg-pink-50 px-3 py-2 text-xs font-black text-pink-600">Ngày 16</span>
+          </div>
+          <div className="grid flex-1 grid-cols-7 gap-1.5 rounded-3xl bg-white/70 p-3 shadow-inner">
+            {Array.from({ length: 21 }).map((_, index) => {
+              const recorded = [8, 9, 10, 15].includes(index);
+              const fertile = [3, 4, 5].includes(index);
+              return (
+                <div
+                  key={index}
+                  className={`grid place-items-center rounded-xl text-[10px] font-black ${
+                    recorded
+                      ? 'bg-pink-400 text-white shadow-sm'
+                      : fertile
+                        ? 'bg-sky-100 text-sky-700'
+                        : 'bg-white/90 text-slate-400'
+                  }`}
+                >
+                  {index + 1}
+                </div>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-[10px] font-black text-slate-500">
+            <span className="rounded-full bg-white/80 px-3 py-2"><span className="mr-1 text-pink-500">●</span>Kỳ kinh</span>
+            <span className="rounded-full bg-white/80 px-3 py-2"><span className="mr-1 text-sky-500">●</span>Thụ thai</span>
+            <span className="rounded-full bg-white/80 px-3 py-2"><span className="mr-1 text-slate-400">●</span>Nhật ký</span>
+          </div>
         </div>
-        <h3 className="text-xl font-black leading-tight text-slate-900">{feature.title}</h3>
-        <p className="text-sm font-medium leading-relaxed text-slate-500">{feature.description}</p>
+      );
+    case 'ai':
+      return (
+        <div className="flex h-full flex-col gap-4 p-4">
+          <div className="rounded-3xl bg-white/90 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-500">Hi AI</p>
+              <span className="material-symbols-outlined text-sky-400">verified</span>
+            </div>
+            <p className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-800">
+              Hôm nay mình hơi đau bụng và mệt, cần chăm sóc gì?
+            </p>
+          </div>
+          <div className="flex-1 rounded-3xl bg-gradient-to-br from-sky-400 via-violet-400 to-pink-400 p-4 text-white shadow-lg">
+            <p className="text-xs font-black opacity-80">Gợi ý cá nhân hóa</p>
+            <p className="mt-3 text-base font-black leading-snug">
+              Nghỉ sớm hơn, uống nước ấm, dùng túi chườm và ghi lại mức đau trong nhật ký hôm nay.
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {['Chu kỳ', 'Triệu chứng', 'Cảm xúc', 'RAG tiếng Việt'].map((label) => (
+                <span key={label} className="rounded-2xl bg-white/20 px-3 py-2 text-center text-[10px] font-black">
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white/80 px-4 py-3 text-xs font-bold text-slate-500">
+            Nguồn tham khảo y tế được lọc trước khi trả lời.
+          </div>
+        </div>
+      );
+    case 'map':
+      return (
+        <div className="relative h-full overflow-hidden p-4">
+          <div className="absolute inset-4 rounded-[2rem] bg-gradient-to-br from-rose-100 via-orange-50 to-sky-100">
+            <div className="absolute left-7 top-10 h-1 w-48 rotate-12 rounded-full bg-amber-300/80" />
+            <div className="absolute bottom-16 right-3 h-1 w-56 -rotate-12 rounded-full bg-sky-300/80" />
+            <div className="absolute left-16 top-5 h-40 w-1 rotate-12 rounded-full bg-white/90" />
+            <div className="absolute right-16 top-7 h-44 w-1 -rotate-12 rounded-full bg-white/90" />
+          </div>
+          <div className="relative ml-auto w-fit rounded-2xl bg-white/95 px-4 py-3 text-xs font-black text-slate-700 shadow-sm">
+            Cafe 1.2 km · Quận 1
+          </div>
+          <div className="absolute bottom-8 left-7 right-7 rounded-3xl bg-white/95 p-4 shadow-xl">
+            <div className="flex items-center gap-3">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-rose-500 text-white">
+                <span className="material-symbols-outlined text-[22px]">favorite</span>
+              </span>
+              <div>
+                <p className="text-sm font-black text-slate-900">Điểm hẹn gần bạn</p>
+                <p className="text-[11px] font-bold text-slate-400">Ăn uống · Cafe · Hẹn hò</p>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <span className="rounded-2xl bg-rose-50 px-3 py-2 text-center text-[10px] font-black text-rose-600">Muốn đi</span>
+              <span className="rounded-2xl bg-sky-50 px-3 py-2 text-center text-[10px] font-black text-sky-600">Lưu cho cả hai</span>
+            </div>
+          </div>
+        </div>
+      );
+    case 'question':
+      return (
+        <div className="flex h-full flex-col gap-4 p-4">
+          <div className="rounded-3xl bg-white/90 p-5 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-400">Câu hỏi hôm nay</p>
+            <p className="mt-3 text-xl font-black leading-snug text-slate-900">
+              Nếu tối nay rảnh, hai người muốn làm gì để thấy gần nhau hơn?
+            </p>
+          </div>
+          <div className="grid flex-1 grid-cols-2 gap-3">
+            <div className="rounded-3xl bg-emerald-50 p-4 shadow-sm">
+              <span className="material-symbols-outlined text-emerald-500">check_circle</span>
+              <p className="mt-6 text-xs font-black text-emerald-700">Bạn đã trả lời</p>
+              <p className="mt-1 text-[11px] font-bold text-emerald-600/70">Ẩn đến khi cả hai xong</p>
+            </div>
+            <div className="rounded-3xl bg-pink-50 p-4 shadow-sm">
+              <span className="material-symbols-outlined text-pink-500">mark_chat_read</span>
+              <p className="mt-6 text-xs font-black text-pink-700">Người ấy đã trả lời</p>
+              <p className="mt-1 text-[11px] font-bold text-pink-600/70">Mở khóa câu trả lời</p>
+            </div>
+          </div>
+          <p className="rounded-2xl bg-white/80 px-4 py-3 text-xs font-bold text-slate-500">Không gian riêng để hiểu suy nghĩ của nhau mỗi ngày.</p>
+        </div>
+      );
+    case 'anniversary':
+      return (
+        <div className="grid h-full gap-4 p-4 md:grid-cols-[1fr_0.85fr]">
+          <div className="rounded-3xl bg-white/90 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-400">Ngày bên nhau</p>
+              <span className="material-symbols-outlined text-pink-400">favorite</span>
+            </div>
+            <p className="mt-5 text-6xl font-black text-slate-900">906</p>
+            <p className="mt-2 text-sm font-bold text-slate-500">Kỷ niệm tháng này · 2 sự kiện</p>
+            <div className="mt-5 rounded-3xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-600">
+              20/07 · Lần đầu đi Đà Lạt
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 rounded-3xl bg-white/70 p-3 shadow-inner">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <span
+                key={index}
+                className={`grid place-items-center rounded-2xl text-[11px] font-black ${
+                  [4, 9].includes(index) ? 'bg-pink-400 text-white shadow-sm' : 'bg-white/90 text-slate-400'
+                }`}
+              >
+                {index + 1}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    case 'mood':
+      return (
+        <div className="flex h-full flex-col gap-4 p-4">
+          <div className="rounded-3xl bg-white/90 p-5 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-500">Nhật ký hôm nay</p>
+            <p className="mt-2 text-lg font-black text-slate-900">Cơ thể và cảm xúc</p>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {['Vui', 'Mệt', 'Cần ôm'].map((mood, index) => (
+              <span key={mood} className={`rounded-3xl px-3 py-5 text-center text-xs font-black shadow-sm ${index === 2 ? 'bg-pink-400 text-white' : 'bg-white/90 text-slate-600'}`}>
+                {mood}
+              </span>
+            ))}
+          </div>
+          <div className="flex-1 rounded-3xl bg-white/90 p-4 shadow-sm">
+            <div className="flex items-center justify-between text-xs font-black text-slate-500">
+              <span>Đau bụng</span>
+              <span className="text-pink-500">Vừa</span>
+            </div>
+            <div className="mt-3 h-2 rounded-full bg-pink-50">
+              <div className="h-full w-2/3 rounded-full bg-pink-400" />
+            </div>
+            <p className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700">
+              Đã gửi tín hiệu quan tâm cho Người ấy.
+            </p>
+          </div>
+        </div>
+      );
+    case 'products':
+      return (
+        <div className="flex h-full flex-col gap-4 p-4">
+          <div className="rounded-3xl bg-white/90 p-5 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-500">Gợi ý chăm sóc</p>
+            <p className="mt-2 text-lg font-black text-slate-900">Theo nhu cầu từng giai đoạn</p>
+          </div>
+          <div className="grid flex-1 grid-cols-2 gap-3">
+            {[
+              ['Túi chườm ấm', 'Đau bụng'],
+              ['Vitamin tổng hợp', 'Sức khỏe'],
+              ['Trà gừng ấm', 'Thư giãn'],
+              ['Quà nhỏ', 'Quan tâm'],
+            ].map(([item, tag]) => (
+              <div key={item} className="flex flex-col justify-between rounded-3xl bg-white/90 p-4 shadow-sm">
+                <span className="material-symbols-outlined text-emerald-500">shopping_bag</span>
+                <div>
+                  <p className="text-xs font-black text-slate-800">{item}</p>
+                  <p className="mt-1 text-[10px] font-bold text-slate-400">{tag}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-black text-emerald-700">
+            Link sản phẩm được kiểm tra trước khi hiển thị.
+          </div>
+        </div>
+      );
+    case 'connection':
+      return (
+        <div className="flex h-full flex-col gap-4 p-4">
+          <div className="rounded-3xl bg-white/90 p-5 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-purple-500">Kết nối yêu thương</p>
+            <div className="mt-4 flex items-center justify-center gap-4">
+              <span className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-pink-300 to-rose-100 text-xl font-black text-pink-700 shadow-sm">N</span>
+              <span className="material-symbols-outlined text-pink-400">favorite</span>
+              <span className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-sky-300 to-violet-100 text-xl font-black text-sky-700 shadow-sm">M</span>
+            </div>
+          </div>
+          <div className="grid flex-1 grid-cols-2 gap-3">
+            {[
+              ['Chu kỳ', 'Đồng bộ nhắc nhở'],
+              ['Cảm xúc', 'Biết lúc cần quan tâm'],
+              ['Lịch chung', 'Không quên ngày đặc biệt'],
+              ['Quyền riêng tư', 'Chỉ chia sẻ phần cho phép'],
+            ].map(([title, text]) => (
+              <div key={title} className="rounded-3xl bg-white/90 p-4 shadow-sm">
+                <p className="text-xs font-black text-slate-900">{title}</p>
+                <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
+function FeatureShowcaseCarousel() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const [isAutoPaused, setIsAutoPaused] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
+  const activeFeature = FEATURE_SHOWCASES[activeIndex];
+  const featureCount = FEATURE_SHOWCASES.length;
+
+  useEffect(() => {
+    if (isAutoPaused) return undefined;
+
+    const timerId = window.setTimeout(() => {
+      setDirection(1);
+      setActiveIndex((current) => (current + 1) % featureCount);
+    }, FEATURE_AUTO_ADVANCE_MS);
+
+    return () => window.clearTimeout(timerId);
+  }, [activeIndex, featureCount, isAutoPaused]);
+
+  const goToPrevious = () => {
+    setDirection(-1);
+    setActiveIndex((current) => (current - 1 + featureCount) % featureCount);
+  };
+
+  const goToNext = () => {
+    setDirection(1);
+    setActiveIndex((current) => (current + 1) % featureCount);
+  };
+
+  return (
+    <div
+      className="w-full animate-fade-in-up delay-100"
+      onMouseEnter={() => setIsAutoPaused(true)}
+      onMouseLeave={() => setIsAutoPaused(false)}
+      onFocusCapture={() => setIsAutoPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsAutoPaused(false);
+        }
+      }}
+    >
+      <div className="relative overflow-hidden rounded-[2.5rem] border border-white/70 bg-white/80 p-3 shadow-[0_24px_70px_-34px_rgba(236,72,153,0.45)] backdrop-blur-md">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-pink-100 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-10 h-64 w-64 rounded-full bg-sky-100 blur-3xl" />
+
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={activeFeature.title}
+            custom={direction}
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction * 48, scale: 0.98 }}
+            animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0, scale: 1 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction * -48, scale: 0.98 }}
+            transition={shouldReduceMotion ? { duration: 0.01 } : FEATURE_TRANSITION}
+            id="active-feature-card"
+            className={`relative grid min-h-[500px] overflow-hidden rounded-[2rem] border p-5 shadow-sm md:grid-cols-[0.9fr_1.1fr] md:p-8 ${activeFeature.cardClass}`}
+          >
+            <div className="flex flex-col justify-between gap-8 text-left">
+              <div className="flex flex-col gap-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className={`grid h-14 w-14 place-items-center rounded-2xl bg-white shadow-sm ${activeFeature.iconClass}`}>
+                    <span className="material-symbols-outlined text-[30px]">{activeFeature.icon}</span>
+                  </div>
+                  <span className="rounded-full border border-white/70 bg-white/80 px-4 py-2 text-xs font-black text-slate-500 shadow-sm">
+                    {String(activeIndex + 1).padStart(2, '0')} / {String(featureCount).padStart(2, '0')}
+                  </span>
+                </div>
+
+                <div className="max-w-[460px]">
+                  <h3 className="text-3xl font-black leading-tight text-slate-950 md:text-5xl">
+                    {activeFeature.title}
+                  </h3>
+                  <p className="mt-5 text-base font-semibold leading-relaxed text-slate-600 md:text-lg">
+                    {activeFeature.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={goToPrevious}
+                    aria-label="Tinh nang truoc"
+                    className="grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/90 text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:text-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:ring-offset-2 active:scale-[0.96]"
+                  >
+                    <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goToNext}
+                    aria-label="Tinh nang tiep theo"
+                    className="grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/90 text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:text-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:ring-offset-2 active:scale-[0.96]"
+                  >
+                    <span className="material-symbols-outlined text-[22px]">arrow_forward</span>
+                  </button>
+                </div>
+                <div className="hidden h-1 flex-1 overflow-hidden rounded-full bg-white/70 sm:block">
+                  <motion.div
+                    key={`progress-${activeIndex}`}
+                    initial={shouldReduceMotion || isAutoPaused ? { width: `${((activeIndex + 1) / featureCount) * 100}%` } : { width: 0 }}
+                    animate={{ width: isAutoPaused ? `${((activeIndex + 1) / featureCount) * 100}%` : '100%' }}
+                    transition={shouldReduceMotion ? { duration: 0.01 } : { duration: isAutoPaused ? 0.25 : FEATURE_AUTO_ADVANCE_MS / 1000, ease: 'linear' }}
+                    className="h-full rounded-full bg-gradient-to-r from-sky-400 via-violet-400 to-pink-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <motion.div
+              initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20, rotate: -1 }}
+              animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, rotate: 0 }}
+              transition={shouldReduceMotion ? { duration: 0.01 } : { ...FEATURE_TRANSITION, delay: 0.08 }}
+              className="relative mt-4 min-h-[280px] overflow-hidden rounded-[1.75rem] bg-white/60 p-3 shadow-inner md:mt-0 md:min-h-[420px]"
+            >
+              <div className={`h-full min-h-[260px] overflow-hidden rounded-[1.4rem] bg-gradient-to-br md:min-h-[396px] ${activeFeature.visualClass}`}>
+                <FeatureProductSnapshot type={activeFeature.visual} />
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -330,7 +680,7 @@ export default function LandingPage() {
         </div>
 
         {/* ── Hero Section ── */}
-        <div className="px-4 md:px-10 flex flex-1 justify-center py-5 md:py-10">
+        <div data-guide="landing-hero" className="px-4 md:px-10 flex flex-1 justify-center py-5 md:py-10">
           <div className="flex flex-col max-w-[1100px] flex-1">
             <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16 py-8">
 
@@ -440,11 +790,7 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {FEATURE_SHOWCASES.map((feature) => (
-                  <FeatureShowcaseCard key={feature.title} feature={feature} />
-                ))}
-              </div>
+              <FeatureShowcaseCarousel />
 
             </div>
           </div>

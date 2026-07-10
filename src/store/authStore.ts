@@ -2,9 +2,20 @@ import { create } from 'zustand';
 import { ApiResponse, AuthPayload, RegisterDto, User } from '../types';
 import api from '../lib/api';
 import { clearAuthSession, hasAuthSessionMarker, markAuthSessionActive } from '../lib/session';
+import { getUserFacingError } from '../lib/userFacingError';
 
 type AuthApiResponse = ApiResponse<AuthPayload> & Partial<AuthPayload>;
 type UserApiResponse = ApiResponse<{ user: User }> & { user?: User };
+type AuthErrorData = { code?: string; email?: string; trackingId?: string };
+
+function authRequestError(err: any, fallback: string) {
+  const error = new Error(getUserFacingError(err, fallback)) as Error & AuthErrorData;
+  const data = err.response?.data?.data as AuthErrorData | undefined;
+  error.code = data?.code;
+  error.email = data?.email;
+  error.trackingId = data?.trackingId;
+  return error;
+}
 
 const SESSION_MARKER = 'cookie-session';
 
@@ -71,7 +82,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({ user: payload.user, token: SESSION_MARKER, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false });
-      throw new Error(err.response?.data?.message || 'Đăng nhập thất bại');
+      throw new Error(getUserFacingError(err, 'Đăng nhập thất bại'));
     }
   },
 
@@ -89,7 +100,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       return payload.user;
     } catch (err: any) {
       set({ isLoading: false });
-      throw new Error(err.response?.data?.message || 'Đăng ký thất bại');
+      throw authRequestError(err, 'Đăng ký thất bại');
     }
   },
 
@@ -102,7 +113,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({ user: payload.user, token: SESSION_MARKER, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false });
-      throw new Error(err.response?.data?.message || 'Kích hoạt tài khoản thất bại');
+      throw new Error(getUserFacingError(err, 'Kích hoạt tài khoản thất bại'));
     }
   },
 
@@ -110,7 +121,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     try {
       await api.post(`/auth/resend-activation?email=${encodeURIComponent(email)}`);
     } catch (err: any) {
-      throw new Error(err.response?.data?.message || 'Gửi lại mã OTP thất bại');
+      throw authRequestError(err, 'Gửi lại mã OTP thất bại');
     }
   },
 
@@ -124,7 +135,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       return authPayload.user;
     } catch (err: any) {
       set({ isLoading: false });
-      throw new Error(err.response?.data?.message || `Đăng nhập ${provider} thất bại`);
+      throw authRequestError(err, `Đăng nhập ${provider} thất bại`);
     }
   },
 

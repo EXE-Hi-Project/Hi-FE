@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 import HiLogo from '../components/ui/HiLogo';
+import { getUserFacingError } from '../lib/userFacingError';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -23,8 +24,7 @@ export default function ForgotPasswordPage() {
       setStep(2);
       toast.success('Mã OTP đã được gửi đến email của bạn');
     } catch (error: unknown) {
-      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-      toast.error(message || 'Không thể gửi mã OTP');
+      toast.error(getUserFacingError(error, 'Không thể gửi mã OTP'));
     } finally {
       setIsSubmitting(false);
     }
@@ -68,8 +68,7 @@ export default function ForgotPasswordPage() {
       toast.success('Xác minh thành công');
       navigate(`/reset-password/${encodeURIComponent(resetToken)}`, { replace: true });
     } catch (error: unknown) {
-      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-      toast.error(message || 'Mã OTP không đúng');
+      toast.error(getUserFacingError(error, 'Mã OTP không đúng'));
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
@@ -106,7 +105,7 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
-              <form onSubmit={handleSendOtp} className="space-y-5">
+              <form data-guide="auth-form" onSubmit={handleSendOtp} className="space-y-5">
                 <div className="space-y-1.5">
                   <label className="text-sm font-bold text-slate-800">Email</label>
                   <div className="relative">
@@ -154,7 +153,7 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
-              <form onSubmit={handleVerifyOtp} className="space-y-6">
+              <form data-guide="auth-form" onSubmit={handleVerifyOtp} className="space-y-6">
                 <div className="flex justify-between gap-2" onPaste={handleOtpPaste}>
                   {otp.map((digit, index) => (
                     <input

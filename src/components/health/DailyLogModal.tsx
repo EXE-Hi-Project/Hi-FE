@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import type { DailyLog, FlowIntensity, SymptomCategory, SymptomDictionary, UpsertDailyLogDto, CycleRecord } from '../../types/shared';
 import api from '../../lib/api';
+import { getUserFacingError } from '../../lib/userFacingError';
 import ResponsiveModal from '../ui/ResponsiveModal';
 
 export type DailyLogMode = 'default' | 'periodStart';
@@ -254,7 +255,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
       onClose();
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : 'Không thể lưu nhật ký sức khỏe');
+      toast.error(getUserFacingError(error, 'Không thể lưu nhật ký sức khỏe'));
     },
   });
 

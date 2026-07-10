@@ -1,12 +1,10 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
-import axios from 'axios';
 import { renderToStaticMarkup } from 'react-dom/server';
 import maplibregl, { Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
   BookmarkSimple,
-  Camera,
   CaretDown,
   Check,
   ClockCounterClockwise,
@@ -40,7 +38,7 @@ type SortMode = 'recommended' | 'distance' | 'rating' | 'popular';
 type MapViewMode = 'nearby' | 'saved';
 type LocationStatus = 'locating' | 'ready' | 'denied' | 'unsupported' | 'error';
 type IdentityMode = 'real' | 'anonymous' | 'nickname';
-type DetailPanel = 'photos' | 'review' | 'report' | null;
+type DetailPanel = 'review' | 'report' | null;
 type SearchSuggestion = {
   id: string;
   name: string;
@@ -584,7 +582,6 @@ function PlaceDetail({
   onSave,
   onReview,
   onReport,
-  onPhoto,
   busy,
   userPosition,
 }: {
@@ -596,7 +593,6 @@ function PlaceDetail({
   onSave: () => void;
   onReview: (rating: number, content: string, identityMode: IdentityMode, nickname: string) => void;
   onReport: (reason: string) => void;
-  onPhoto: (file: File) => void;
   busy: boolean;
   userPosition: LatLng | null;
 }) {
@@ -681,7 +677,6 @@ function PlaceDetail({
               <BookmarkSimple size={20} weight={place.savedByMe ? 'fill' : 'bold'} />
             </button>
             {([
-              ['photos', 'Thêm ảnh', Camera],
               ['review', 'Viết review', Star],
               ['report', 'Báo cáo', Flag],
             ] as Array<[Exclude<DetailPanel, null>, string, typeof Star]>).map(([panel, label, Icon]) => (
@@ -690,14 +685,6 @@ function PlaceDetail({
               </button>
             ))}
           </div>
-
-          {activePanel === 'photos' ? <div className="mt-3 rounded-xl bg-slate-50 p-2.5">
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-rose-200 bg-white px-3 py-2.5 text-xs font-black text-rose-600">
-              <Plus size={15} weight="bold" /> Thêm ảnh địa điểm
-              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && onPhoto(e.target.files[0])} />
-            </label>
-            {(place.photos ?? []).length > 0 ? <div className="mt-2 grid grid-cols-3 gap-1.5">{(place.photos ?? []).slice(0, 6).map((photo) => <img key={photo._id} src={photo.url} alt="" className="aspect-square rounded-lg object-cover" />)}</div> : null}
-          </div> : null}
 
           {activePanel === 'review' ? <div className="mt-3 rounded-xl bg-slate-50 p-2.5">
             <p className="text-sm font-black text-slate-900">Viết review</p>
@@ -1049,27 +1036,6 @@ export default function CoupleMapPage() {
     onError: () => toast.error('Không gửi được báo cáo'),
   });
 
-  const photoMutation = useMutation({
-    mutationFn: async ({ id, file }: { id: number; file: File }) => {
-      const presign = await api.post(`/couple-places/${id}/photos/presign`, {
-        fileName: file.name,
-        contentType: file.type,
-        contentLength: file.size,
-      }).then((r) => r.data.data as { uploadUrl: string; objectKey: string; publicUrl: string });
-      await axios.put(presign.uploadUrl, file, { headers: { 'Content-Type': file.type } });
-      return api.post(`/couple-places/${id}/photos/confirm`, {
-        objectKey: presign.objectKey,
-        url: presign.publicUrl,
-        contentType: file.type,
-      }).then((r) => r.data.photo);
-    },
-    onSuccess: () => {
-      toast.success('Đã thêm ảnh');
-      invalidate();
-    },
-    onError: () => toast.error('Không tải được ảnh lên'),
-  });
-
   const locateMe = () => {
     setLocationStatus('locating');
     if (!navigator.geolocation) {
@@ -1129,7 +1095,7 @@ export default function CoupleMapPage() {
   const suggestions = searchQuery.data ?? [];
   const visibleSuggestions = searchValue.trim().length >= 2 ? suggestions : recentSearches;
   const showSuggestions = searchFocused && (searchValue.trim().length >= 2 || recentSearches.length > 0);
-  const busy = createMutation.isPending || reactionMutation.isPending || reviewMutation.isPending || reportMutation.isPending || photoMutation.isPending;
+  const busy = createMutation.isPending || reactionMutation.isPending || reviewMutation.isPending || reportMutation.isPending;
   const activePlacesQuery = viewMode === 'saved' ? savedPlacesQuery : placesQuery;
   const selectedSuggestionCategory = categoryFromSuggestion(selectedSuggestion, category);
   const pendingSuggestionCategory = categoryFromSuggestion(pendingSuggestion ?? selectedSuggestion, category);
@@ -1218,7 +1184,7 @@ export default function CoupleMapPage() {
         <LocationPermissionOverlay status={locationStatus} onRetry={locateMe} />
       )}
 
-      {mapAvailable ? <div className="pointer-events-none absolute inset-x-0 top-[92px] z-10 p-3 md:p-4">
+      {mapAvailable ? <div data-guide="map-search" className="pointer-events-none absolute inset-x-0 top-[92px] z-10 p-3 md:p-4">
         <div className="pointer-events-auto mx-auto flex max-w-4xl flex-col gap-2 rounded-2xl border border-white/80 bg-white/92 p-2 shadow-xl backdrop-blur lg:flex-row lg:items-center">
           <div className="relative min-w-0 flex-1">
             <div className="flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm focus-within:border-rose-300">
@@ -1325,7 +1291,7 @@ export default function CoupleMapPage() {
         </div>
       </div> : null}
 
-      {mapAvailable ? <aside className="absolute bottom-4 left-4 top-[168px] z-10 hidden w-[312px] flex-col overflow-hidden rounded-2xl border border-white/80 bg-white/92 shadow-2xl shadow-slate-900/10 backdrop-blur lg:flex">
+      {mapAvailable ? <aside data-guide="map-list" className="absolute bottom-4 left-4 top-[168px] z-10 hidden w-[312px] flex-col overflow-hidden rounded-2xl border border-white/80 bg-white/92 shadow-2xl shadow-slate-900/10 backdrop-blur lg:flex">
         <div className="border-b border-slate-100 p-3">
           <MapViewToggle value={viewMode} onChange={changeViewMode} />
           <div className="mb-2 flex items-center justify-between">
@@ -1395,7 +1361,6 @@ export default function CoupleMapPage() {
           onSave={() => detailPlace._id && reactionMutation.mutate({ id: detailPlace._id, type: 'save', active: !detailPlace.savedByMe })}
           onReview={(rating, content, identityMode, nickname) => detailPlace._id && reviewMutation.mutate({ id: detailPlace._id, rating, content, identityMode, nickname })}
           onReport={(reason) => detailPlace._id && reportMutation.mutate({ id: detailPlace._id, reason })}
-          onPhoto={(file) => detailPlace._id && photoMutation.mutate({ id: detailPlace._id, file })}
           busy={busy}
           userPosition={userPosition}
         />

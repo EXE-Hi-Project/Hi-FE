@@ -174,7 +174,7 @@ export default function CyclesPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">
+              <div data-guide="cycle-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">
                 {[
                   { icon: 'calendar_month', label: 'Độ dài TB', value: `${avgLen} ngày`, from: '#f9a8d4', to: '#f472b6', iconColor: '#f472b6' },
                   { icon: 'water_drop', label: 'Kinh nguyệt TB', value: `${avgPeriod} ngày`, from: '#fca5a5', to: '#f87171', iconColor: '#ef4444' },
@@ -222,7 +222,7 @@ export default function CyclesPage() {
                 </div>
               </div>
 
-              <div className="flex gap-2 mb-5 bg-white/60 rounded-2xl p-1 backdrop-blur-sm border border-white w-fit shadow-sm">
+              <div data-guide="cycle-tabs" className="flex gap-2 mb-5 bg-white/60 rounded-2xl p-1 backdrop-blur-sm border border-white w-fit shadow-sm">
                 {(['history', 'stats'] as const).map((item) => (
                   <button
                     key={item}
