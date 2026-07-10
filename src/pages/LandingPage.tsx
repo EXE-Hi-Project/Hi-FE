@@ -680,7 +680,7 @@ export default function LandingPage() {
         </div>
 
         {/* ── Hero Section ── */}
-        <div data-guide="landing-hero" className="px-4 md:px-10 flex flex-1 justify-center py-5 md:py-10">
+        <div className="px-4 md:px-10 flex flex-1 justify-center py-5 md:py-10">
           <div className="flex flex-col max-w-[1100px] flex-1">
             <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16 py-8">
 

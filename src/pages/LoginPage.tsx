@@ -309,7 +309,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Form */}
-                <form data-guide="auth-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
 
                   {/* Login error banner */}
                   {loginError && (
@@ -342,7 +342,7 @@ export default function LoginPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-bold text-gray-800">Mật khẩu</label>
-                      <Link data-guide="forgot-password" to="/forgot-password" className="text-xs font-semibold hover:underline" style={{ color: '#9b6ee8' }}>Quên mật khẩu?</Link>
+                      <Link to="/forgot-password" className="text-xs font-semibold hover:underline" style={{ color: '#9b6ee8' }}>Quên mật khẩu?</Link>
                     </div>
                     <div className="relative">
                       <input

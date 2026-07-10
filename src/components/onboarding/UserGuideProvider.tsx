@@ -307,16 +307,17 @@ export default function UserGuideProvider({ children }: { children: ReactNode })
   const userId = user?._id ?? 'guest';
   const blocked = isBootstrapping || location.pathname.startsWith('/admin') || user?.role === 'admin';
   const config = useMemo(() => getUserGuideConfig(location.pathname), [location.pathname]);
-  const currentStep = config.steps[stepIndex] ?? config.steps[0];
+  const currentStep = config?.steps[stepIndex] ?? config?.steps[0];
   const targetRect = useCurrentGuideTarget(active, currentStep?.target);
-  const available = !blocked && config.steps.length > 0;
+  const available = !blocked && Boolean(config?.steps.length);
 
   const closeAndComplete = useCallback(() => {
+    if (!config) return;
     markGuideCompleted(userId, config.routeKey);
     setActive(false);
     setStepIndex(0);
     manuallyOpenedRef.current = false;
-  }, [config.routeKey, userId]);
+  }, [config, userId]);
 
   const openCurrentGuide = useCallback(() => {
     if (!available) return;
@@ -326,12 +327,13 @@ export default function UserGuideProvider({ children }: { children: ReactNode })
   }, [available]);
 
   const resetCurrentGuide = useCallback(() => {
+    if (!config) return;
     clearGuideCompleted(userId, config.routeKey);
     if (!available) return;
     manuallyOpenedRef.current = true;
     setStepIndex(0);
     setActive(true);
-  }, [available, config.routeKey, userId]);
+  }, [available, config, userId]);
 
   useEffect(() => {
     setActive(false);
@@ -340,11 +342,11 @@ export default function UserGuideProvider({ children }: { children: ReactNode })
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!available || manuallyOpenedRef.current) return;
+    if (!available || !config || manuallyOpenedRef.current) return;
     if (hasCompletedGuide(userId, config.routeKey)) return;
     const timer = window.setTimeout(() => setActive(true), 550);
     return () => window.clearTimeout(timer);
-  }, [available, config.routeKey, userId, location.pathname]);
+  }, [available, config, userId, location.pathname]);
 
   const contextValue = useMemo(() => ({
     openCurrentGuide,
@@ -354,6 +356,7 @@ export default function UserGuideProvider({ children }: { children: ReactNode })
   }), [active, available, openCurrentGuide, resetCurrentGuide]);
 
   const goNext = () => {
+    if (!config) return;
     if (stepIndex >= config.steps.length - 1) {
       closeAndComplete();
       return;
@@ -370,7 +373,7 @@ export default function UserGuideProvider({ children }: { children: ReactNode })
       {children}
       {available && !active ? <ReplayButton onClick={openCurrentGuide} /> : null}
       <AnimatePresence>
-        {available && active && currentStep ? (
+        {available && active && config && currentStep ? (
           <>
             <motion.div
               className="fixed inset-0 z-[75] bg-slate-950/30 backdrop-blur-[1px]"
