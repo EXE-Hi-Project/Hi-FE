@@ -45,72 +45,6 @@ const fallbackGuide: UserGuideConfig = {
 };
 
 const guideByRoute: Record<string, UserGuideConfig> = {
-  landing: {
-    routeKey: 'landing',
-    label: 'Trang giới thiệu',
-    steps: [
-      {
-        id: 'intro',
-        title: 'Chào mừng đến với Hi Lover',
-        body: 'Đây là nơi bạn xem nhanh các tính năng chính trước khi tạo tài khoản hoặc đăng nhập.',
-        target: '[data-guide="landing-hero"]',
-        placement: 'bottom',
-      },
-      {
-        id: 'features',
-        title: 'Khám phá tính năng',
-        body: 'Khu vực tính năng giới thiệu cách Hi hỗ trợ chu kỳ, AI, bản đồ hẹn hò, nhật ký cảm xúc và kết nối cặp đôi.',
-        target: '#features',
-        placement: 'top',
-      },
-      {
-        id: 'start',
-        title: 'Bắt đầu sử dụng',
-        body: 'Bạn có thể đăng ký tài khoản mới hoặc đăng nhập để tiếp tục dữ liệu đã có.',
-        target: '[data-guide="auth-actions"]',
-        placement: 'bottom',
-      },
-    ],
-  },
-  login: {
-    routeKey: 'login',
-    label: 'Đăng nhập',
-    steps: [
-      {
-        id: 'login-form',
-        title: 'Đăng nhập tài khoản',
-        body: 'Nhập email và mật khẩu, hoặc dùng Google/Facebook nếu tài khoản đã liên kết.',
-        target: '[data-guide="auth-form"]',
-        placement: 'right',
-      },
-      {
-        id: 'forgot-password',
-        title: 'Quên mật khẩu',
-        body: 'Nếu không nhớ mật khẩu, dùng liên kết quên mật khẩu để nhận hướng dẫn đặt lại.',
-        target: '[data-guide="forgot-password"]',
-        placement: 'bottom',
-      },
-    ],
-  },
-  register: {
-    routeKey: 'register',
-    label: 'Đăng ký',
-    steps: [
-      {
-        id: 'register-form',
-        title: 'Tạo tài khoản mới',
-        body: 'Điền thông tin cơ bản để Hi cá nhân hóa trải nghiệm sức khỏe và kết nối của bạn.',
-        target: '[data-guide="auth-form"]',
-        placement: 'right',
-      },
-      {
-        id: 'activation',
-        title: 'Xác thực email',
-        body: 'Sau khi đăng ký, Hi có thể yêu cầu OTP để bảo vệ tài khoản trước khi vào onboarding.',
-        placement: 'center',
-      },
-    ],
-  },
   password: {
     routeKey: 'password',
     label: 'Khôi phục mật khẩu',
@@ -197,7 +131,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'cycles',
     label: 'Chu kỳ',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'cycle-stats',
         title: 'Chỉ số chu kỳ',
@@ -218,7 +151,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'calendar',
     label: 'Lịch',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'calendar',
         title: 'Lịch chung',
@@ -232,7 +164,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'chat',
     label: 'Hi AI Chat',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'chat-sessions',
         title: 'Phiên trò chuyện',
@@ -260,7 +191,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'products',
     label: 'Sản phẩm',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'product-filters',
         title: 'Lọc gợi ý',
@@ -281,7 +211,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'couple-map',
     label: 'Couple Map',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'map-search',
         title: 'Tìm địa điểm',
@@ -302,7 +231,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'symptoms',
     label: 'Triệu chứng',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'symptoms-main',
         title: 'Nhật ký sức khỏe',
@@ -316,7 +244,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'notifications',
     label: 'Thông báo',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'notifications-list',
         title: 'Trung tâm thông báo',
@@ -330,7 +257,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'settings',
     label: 'Cài đặt',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'settings-main',
         title: 'Cài đặt hồ sơ',
@@ -344,7 +270,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'notification-settings',
     label: 'Cài đặt thông báo',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'notification-settings',
         title: 'Kết nối và nhắc nhở',
@@ -358,7 +283,6 @@ const guideByRoute: Record<string, UserGuideConfig> = {
     routeKey: 'partner',
     label: 'Người ấy',
     steps: [
-      ...sharedNavSteps,
       {
         id: 'partner-hub',
         title: 'Không gian cặp đôi',
@@ -409,10 +333,8 @@ const guideByRoute: Record<string, UserGuideConfig> = {
   },
 };
 
-export function getUserGuideConfig(pathname: string): UserGuideConfig {
-  if (pathname === '/') return guideByRoute.landing;
-  if (pathname.startsWith('/login')) return guideByRoute.login;
-  if (pathname.startsWith('/register')) return guideByRoute.register;
+export function getUserGuideConfig(pathname: string): UserGuideConfig | null {
+  if (pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/register')) return null;
   if (pathname.startsWith('/forgot-password') || pathname.startsWith('/reset-password')) return guideByRoute.password;
   if (pathname.startsWith('/onboarding')) return guideByRoute.onboarding;
   if (pathname.startsWith('/female-dashboard')) return guideByRoute.femaleDashboard;

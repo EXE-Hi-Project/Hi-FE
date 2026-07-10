@@ -322,7 +322,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Form — 2-col grid for compact horizontal feel */}
-              <form data-guide="auth-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
 
                 {/* Row 1: Name + Email */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

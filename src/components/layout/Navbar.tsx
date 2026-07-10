@@ -150,7 +150,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
           </div>
         ) : null}
 
-        <div data-guide={!loggedIn ? 'auth-actions' : undefined} className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {loggedIn ? (
             <>
               <PlanStatusPill subscription={subscription} compact className="hidden sm:inline-flex" />
