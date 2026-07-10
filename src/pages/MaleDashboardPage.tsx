@@ -174,7 +174,7 @@ export default function MaleDashboardPage() {
           <Suspense fallback={null}><SaleBanner /></Suspense>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <section className="md:col-span-3 rounded-[2rem] border border-blue-100 bg-white/95 p-6 shadow-lg shadow-blue-100/40 backdrop-blur-xl">
+            <section data-guide="partner-summary" className="md:col-span-3 rounded-[2rem] border border-blue-100 bg-white/95 p-6 shadow-lg shadow-blue-100/40 backdrop-blur-xl">
               <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="flex items-center gap-2 text-sm font-black text-blue-500">
@@ -266,7 +266,7 @@ export default function MaleDashboardPage() {
               )}
             </section>
 
-            <div className="md:col-span-1 space-y-6">
+            <div data-guide="quick-links" className="md:col-span-1 space-y-6">
               <div className="rounded-[2rem] border border-blue-100 bg-white/95 p-6 text-center shadow-lg shadow-blue-100/40 backdrop-blur">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="flex items-center gap-2 text-lg font-black text-slate-900">

@@ -3,7 +3,9 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { consumeGoogleOAuthRedirect } from './lib/googleAuth';
+import { getUserFacingError } from './lib/userFacingError';
 import { getOrCreateSessionId, trackEvent } from './utils/analytics';
+import UserGuideProvider from './components/onboarding/UserGuideProvider';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -184,7 +186,7 @@ export default function App() {
           navigate(redirect.nextPath ?? destination);
         } catch (err: any) {
           toast.dismiss('google-redirect-login');
-          toast.error(err.message || 'Dang nhap Google that bai');
+          toast.error(getUserFacingError(err, 'Đăng nhập Google thất bại'));
         }
       };
       performRedirectLogin();
@@ -192,7 +194,7 @@ export default function App() {
   }, [location.hash, socialLogin, navigate]);
 
   return (
-    <>
+    <UserGuideProvider>
       <Suspense fallback={<RouteFallback />}>
       <Routes>
       <Route path="/" element={<HomeRoute />} />
@@ -234,6 +236,6 @@ export default function App() {
       </Routes>
       </Suspense>
       <FloatingHiChatGate />
-    </>
+    </UserGuideProvider>
   );
 }

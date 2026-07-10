@@ -12,6 +12,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
+import { getUserFacingError } from '../../lib/userFacingError';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Modal from '../ui/Modal';
@@ -38,10 +39,7 @@ const EMPTY_FORM: QuestionForm = {
 };
 
 function errorMessage(error: unknown, fallback: string) {
-  if (typeof error === 'object' && error && 'response' in error) {
-    return (error as { response?: { data?: { message?: string } } }).response?.data?.message ?? fallback;
-  }
-  return fallback;
+  return getUserFacingError(error, fallback);
 }
 
 export default function AdminDailyQuestionsPanel() {

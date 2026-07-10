@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { toast } from 'react-hot-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import { getUserFacingError } from '../../lib/userFacingError';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Modal from '../ui/Modal';
@@ -278,10 +279,7 @@ export default function AffiliateAdminPanel() {
       toast.success(next.confidence === 'LOW' ? 'Đã lấy được một phần thông tin từ link' : 'Đã tự điền thông tin từ link');
     },
     onError: (error) => {
-      const message = typeof error === 'object' && error && 'response' in error
-        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-        : null;
-      toast.error(message ?? 'Không đọc được link này. Bạn vẫn có thể nhập thủ công.');
+      toast.error(getUserFacingError(error, 'Không đọc được link này. Bạn vẫn có thể nhập thủ công.'));
     },
   });
 

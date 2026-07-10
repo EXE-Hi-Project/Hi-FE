@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { clsx } from 'clsx';
-import type { AxiosError } from 'axios';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import api from '../lib/api';
+import { getUserFacingError } from '../lib/userFacingError';
 import { ChatMessage } from '../types';
 import { useSubscription, type AiUsage } from '../hooks/useSubscription';
 import HiLogo from '../components/ui/HiLogo';
@@ -100,9 +100,9 @@ export default function ChatPage() {
       queryClient.invalidateQueries({ queryKey: ['chat-sessions', userId] });
       queryClient.invalidateQueries({ queryKey: ['subscription', userId] });
     },
-    onError: (error: AxiosError<{ message?: string }>) => {
+    onError: (error: unknown) => {
       setOptimisticMessages([]);
-      toast.error(error.response?.data?.message || 'Hi AI chưa thể trả lời lúc này.');
+      toast.error(getUserFacingError(error, 'Hi AI chưa thể trả lời lúc này.'));
       queryClient.invalidateQueries({ queryKey: ['subscription', userId] });
     },
   });
@@ -141,7 +141,7 @@ export default function ChatPage() {
 
   return (
     <div className="animate-fade-in grid min-h-[calc(100vh-8rem)] gap-5 lg:grid-cols-[300px_1fr]">
-      <aside className="rounded-[2rem] border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur">
+      <aside data-guide="chat-sessions" className="rounded-[2rem] border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur">
         <div className={clsx('rounded-3xl p-4', accent.soft)}>
           <HiLogo size={48} className="mb-3" />
           <h1
@@ -213,7 +213,7 @@ export default function ChatPage() {
                 )}
               </div>
             </div>
-            <div className="flex gap-2 overflow-x-auto">
+            <div data-guide="chat-suggestions" className="flex gap-2 overflow-x-auto">
               {suggestedQuestions.map((question) => (
                 <button
                   key={question}
@@ -276,7 +276,7 @@ export default function ChatPage() {
           </div>
 
           <div className="border-t border-slate-100 bg-white px-4 py-4 md:px-5">
-            <div className="flex items-end gap-2 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-sm focus-within:border-sky-200 focus-within:ring-4 focus-within:ring-sky-50">
+            <div data-guide="chat-input" className="flex items-end gap-2 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-sm focus-within:border-sky-200 focus-within:ring-4 focus-within:ring-sky-50">
               <textarea
                 value={input}
                 onChange={(event) => setInput(event.target.value)}

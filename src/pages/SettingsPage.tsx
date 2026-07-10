@@ -10,6 +10,7 @@ import api from '../lib/api';
 import { User } from '../types';
 import PricingCard from '../components/PricingCard';
 import { useSubscription, usePaymentHistory } from '../hooks/useSubscription';
+import { getUserFacingError } from '../lib/userFacingError';
 
 interface ProfileForm {
   name: string;
@@ -95,7 +96,7 @@ export default function SettingsPage() {
       toast.success('Đã cập nhật hồ sơ!');
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : 'Cập nhật thất bại');
+      toast.error(getUserFacingError(error, 'Cập nhật thất bại'));
     },
   });
 

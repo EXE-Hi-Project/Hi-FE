@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import type { HealthVideo, HealthVideoStatus, HealthVideoTargetAudience, UpsertHealthVideoDto } from '../../types/shared';
 import api from '../../lib/api';
+import { getUserFacingError } from '../../lib/userFacingError';
 
 const EMPTY_FORM: UpsertHealthVideoDto = {
   youtubeVideoId: '',
@@ -85,7 +86,7 @@ export default function HealthVideoAdminPanel() {
       queryClient.invalidateQueries({ queryKey: ['health-video-recommendations'] });
       reset();
     },
-    onError: (error: any) => toast.error(error?.response?.data?.message ?? error?.message ?? 'Không thể lưu video'),
+    onError: (error: unknown) => toast.error(getUserFacingError(error, 'Không thể lưu video')),
   });
 
   const archiveMutation = useMutation({

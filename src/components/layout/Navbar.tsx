@@ -120,7 +120,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
         </Link>
 
         {loggedIn ? (
-          <nav className="mx-3 hidden flex-1 items-center justify-center gap-1 md:flex">
+          <nav data-guide="main-nav" className="mx-3 hidden flex-1 items-center justify-center gap-1 md:flex">
             {dashboardLinks.map(({ to, label, icon }) => {
               const active = location.pathname === to;
               return (
@@ -150,7 +150,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
           </div>
         ) : null}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div data-guide={!loggedIn ? 'auth-actions' : undefined} className="ml-auto flex items-center gap-2">
           {loggedIn ? (
             <>
               <PlanStatusPill subscription={subscription} compact className="hidden sm:inline-flex" />
@@ -165,7 +165,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
                 )}
               </Link>
 
-              <div className="relative" ref={dropRef}>
+              <div data-guide="account-menu" className="relative" ref={dropRef}>
                 <button
                   type="button"
                   onClick={() => setDropOpen((v) => !v)}

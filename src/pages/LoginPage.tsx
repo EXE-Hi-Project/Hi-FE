@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import HiLogo from '../components/ui/HiLogo';
 import { buildGoogleOAuthUrl, extractSafeNextPath, getSafeNextPath } from '../lib/googleAuth';
+import { getUserFacingError } from '../lib/userFacingError';
 
 const schema = z.object({
   email: z.string().email('Email không hợp lệ'),
@@ -74,15 +75,19 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    const nextPath = extractSafeNextPath(location.search) ?? undefined;
-    window.location.assign(buildGoogleOAuthUrl(nextPath));
+    try {
+      const nextPath = extractSafeNextPath(location.search) ?? undefined;
+      window.location.assign(buildGoogleOAuthUrl(nextPath));
+    } catch (err) {
+      toast.error(getUserFacingError(err, 'Không thể bắt đầu đăng nhập Google'));
+    }
   };
 
   const handleFacebookLogin = async () => {
     try {
       await loadFacebookSdk();
     } catch (err: any) {
-      return toast.error(err.message);
+      return toast.error(getUserFacingError(err, 'Không thể bắt đầu đăng nhập Facebook'));
     }
 
     window.FB.login((response) => {
@@ -90,7 +95,7 @@ export default function LoginPage() {
         const { accessToken, userID } = response.authResponse;
         socialLogin('facebook', { accessToken, userID })
           .then((user) => navigateAfterLogin(user))
-          .catch((err: any) => toast.error(err.message));
+          .catch((err: any) => toast.error(getUserFacingError(err, 'Đăng nhập Facebook thất bại')));
       }
     }, { scope: 'email,public_profile' });
   };
@@ -142,7 +147,7 @@ export default function LoginPage() {
         navigate(getSafeNextPath(location.search, '/male-dashboard'));
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+      const msg = getUserFacingError(err, 'Có lỗi xảy ra');
       if (msg === 'PENDING_ACTIVATION') {
         setPendingEmail(data.email);
         setShowOtpScreen(true);
@@ -165,7 +170,7 @@ export default function LoginPage() {
       const { user } = useAuthStore.getState();
       navigateAfterLogin(user);
     } catch (err: any) {
-      toast.error(err.message || 'Xác minh OTP thất bại');
+      toast.error(getUserFacingError(err, 'Xác minh OTP thất bại'));
     }
   };
 
@@ -175,7 +180,7 @@ export default function LoginPage() {
       await resendActivation(pendingEmail);
       toast.success('Mã OTP mới đã được gửi đến email của bạn.');
     } catch (err: any) {
-      toast.error(err.message || 'Gửi lại mã OTP thất bại');
+      toast.error(getUserFacingError(err, 'Gửi lại mã OTP thất bại'));
     } finally {
       setResending(false);
     }
@@ -304,7 +309,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+                <form data-guide="auth-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
 
                   {/* Login error banner */}
                   {loginError && (
@@ -337,7 +342,7 @@ export default function LoginPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-bold text-gray-800">Mật khẩu</label>
-                      <Link to="/forgot-password" className="text-xs font-semibold hover:underline" style={{ color: '#9b6ee8' }}>Quên mật khẩu?</Link>
+                      <Link data-guide="forgot-password" to="/forgot-password" className="text-xs font-semibold hover:underline" style={{ color: '#9b6ee8' }}>Quên mật khẩu?</Link>
                     </div>
                     <div className="relative">
                       <input

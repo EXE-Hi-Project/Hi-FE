@@ -264,7 +264,7 @@ export default function FemaleDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
             {/* ── 1. Cycle Status ── */}
-            <div className="md:col-span-3 bg-white/90 backdrop-blur-sm rounded-3xl p-7 relative overflow-hidden shadow-sm border border-white/80">
+            <div data-guide="cycle-status" className="md:col-span-3 bg-white/90 backdrop-blur-sm rounded-3xl p-7 relative overflow-hidden shadow-sm border border-white/80">
               <div className="absolute top-0 right-0 w-60 h-60 bg-gradient-to-br from-pink-100 to-transparent rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
               <div className="flex justify-between items-start mb-6 relative z-10">
                 <div>
@@ -372,7 +372,7 @@ export default function FemaleDashboardPage() {
 
             {/* ── 2. Partner card ── */}
             <div className="md:col-span-1 space-y-4">
-            <div className="bg-gradient-to-b from-blue-50 to-white rounded-3xl p-5 shadow-sm border border-blue-100 flex flex-col justify-between relative overflow-hidden">
+            <div data-guide="partner-summary" className="bg-gradient-to-b from-blue-50 to-white rounded-3xl p-5 shadow-sm border border-blue-100 flex flex-col justify-between relative overflow-hidden">
               <div className="absolute top-0 right-0 w-28 h-28 bg-blue-200/20 rounded-full blur-2xl pointer-events-none" />
               <div>
                 <div className="flex items-center justify-between mb-5 relative z-10">
@@ -545,7 +545,7 @@ export default function FemaleDashboardPage() {
               )}
             </div>
 
-            <div className="md:col-span-4 bg-white/90 backdrop-blur-sm rounded-3xl p-7 shadow-sm border border-white/80">
+            <div data-guide="ai-entry" className="md:col-span-4 bg-white/90 backdrop-blur-sm rounded-3xl p-7 shadow-sm border border-white/80">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-7">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 mb-1">Câu hỏi thường gặp</h3>

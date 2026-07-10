@@ -191,7 +191,7 @@ export default function OnboardingPage() {
           </span>
         </div>
         {step < 4 && (
-          <div className="flex items-center gap-3">
+          <div data-guide="onboarding-progress" className="flex items-center gap-3">
             <span className="text-xs font-semibold text-gray-500">Bước {displayStepNum} trên {totalSteps}</span>
             <div className="w-28 h-1.5 bg-white/60 rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg, #7ecae8, #c9a8e0, #f9a8c9)' }} />
@@ -201,7 +201,7 @@ export default function OnboardingPage() {
       </div>
 
       {/* ─── Page content ────────────────────────────────────── */}
-      <div className="relative z-10 flex flex-col items-center px-4 pb-16 pt-2">
+      <div data-guide="onboarding-content" className="relative z-10 flex flex-col items-center px-4 pb-16 pt-2">
 
         {/* ══════════════ STEP 0: GENDER ══════════════ */}
         {step === 0 && (

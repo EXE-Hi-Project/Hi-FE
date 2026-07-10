@@ -13,6 +13,7 @@ import {
   Ticket,
 } from '@phosphor-icons/react';
 import api from '../lib/api';
+import { getUserFacingError } from '../lib/userFacingError';
 import { useAuthStore } from '../store/authStore';
 import { bestProductName, cleanProductTitle } from '../utils/affiliateDisplay';
 
@@ -300,10 +301,7 @@ export default function ProductsPage() {
       toast.error('Chưa nhận được link thanh toán voucher');
     },
     onError: (error: unknown) => {
-      const message = error && typeof error === 'object' && 'response' in error
-        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-        : undefined;
-      toast.error(message || 'Không tạo được thanh toán voucher');
+      toast.error(getUserFacingError(error, 'Không tạo được thanh toán voucher'));
     },
   });
 
@@ -349,7 +347,7 @@ export default function ProductsPage() {
           </div>
         </section>
 
-        <section className={`rounded-[2rem] border p-4 shadow-sm backdrop-blur ${theme.panel}`}>
+        <section data-guide="product-filters" className={`rounded-[2rem] border p-4 shadow-sm backdrop-blur ${theme.panel}`}>
           <div className="flex flex-col gap-3">
             <label className="relative min-w-0 w-full">
               <MagnifyingGlass size={20} weight="bold" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -426,6 +424,7 @@ export default function ProductsPage() {
           </section>
         ) : null}
 
+        <div data-guide="product-list">
         {productsQuery.isLoading ? (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {Array.from({ length: 6 }, (_, index) => <ProductSkeleton key={index} />)}
@@ -461,6 +460,7 @@ export default function ProductsPage() {
             })}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

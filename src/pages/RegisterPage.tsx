@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import HiLogo from '../components/ui/HiLogo';
 import { trackEvent } from '../utils/analytics';
 import { buildGoogleOAuthUrl, extractSafeNextPath, getSafeNextPath } from '../lib/googleAuth';
+import { getUserFacingError } from '../lib/userFacingError';
 
 const schema = z.object({
   name: z.string().min(2, 'Tên tối thiểu 2 ký tự'),
@@ -95,15 +96,19 @@ export default function RegisterPage() {
   };
 
   const handleGoogleLogin = () => {
-    const nextPath = extractSafeNextPath(location.search) ?? undefined;
-    window.location.assign(buildGoogleOAuthUrl(nextPath));
+    try {
+      const nextPath = extractSafeNextPath(location.search) ?? undefined;
+      window.location.assign(buildGoogleOAuthUrl(nextPath));
+    } catch (err) {
+      toast.error(getUserFacingError(err, 'Không thể bắt đầu đăng nhập Google'));
+    }
   };
 
   const handleFacebookLogin = async () => {
     try {
       await loadFacebookSdk();
     } catch (err: any) {
-      return toast.error(err.message);
+      return toast.error(getUserFacingError(err, 'Không thể bắt đầu đăng nhập Facebook'));
     }
 
     window.FB.login((response) => {
@@ -111,7 +116,7 @@ export default function RegisterPage() {
         const { accessToken, userID } = response.authResponse;
         socialLogin('facebook', { accessToken, userID })
           .then((user) => navigateAfterLogin(user))
-          .catch((err: any) => toast.error(err.message));
+          .catch((err: any) => toast.error(getUserFacingError(err, 'Đăng nhập Facebook thất bại')));
       }
     }, { scope: 'email,public_profile' });
   };
@@ -150,14 +155,21 @@ export default function RegisterPage() {
       if (res && res.pendingActivation) {
         setPendingEmail(res.email);
         setShowOtpScreen(true);
-        toast.success('Đăng ký thành công! Vui lòng nhập mã OTP để kích hoạt tài khoản.');
+        toast.success(res.existingPendingAccount
+          ? 'Tài khoản đang chờ kích hoạt. Bạn có thể nhập OTP hoặc yêu cầu mã mới.'
+          : 'Đăng ký thành công! Vui lòng nhập mã OTP để kích hoạt tài khoản.');
       } else {
         trackEvent('REGISTER', 'register_page');
         toast.success('Đăng ký thành công!');
         navigate(getSafeNextPath(location.search, '/onboarding'));
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+      const authError = err as Error & { code?: string; email?: string };
+      if (authError.code === 'OTP_DELIVERY_FAILED') {
+        setPendingEmail(authError.email || data.email.trim().toLowerCase());
+        setShowOtpScreen(true);
+      }
+      toast.error(getUserFacingError(err, 'Có lỗi xảy ra'));
     }
   };
 
@@ -172,7 +184,7 @@ export default function RegisterPage() {
       toast.success('Kích hoạt tài khoản thành công!');
       navigate(getSafeNextPath(location.search, '/onboarding'));
     } catch (err: any) {
-      toast.error(err.message || 'Xác minh OTP thất bại');
+      toast.error(getUserFacingError(err, 'Xác minh OTP thất bại'));
     }
   };
 
@@ -182,7 +194,7 @@ export default function RegisterPage() {
       await resendActivation(pendingEmail);
       toast.success('Mã OTP mới đã được gửi đến email của bạn.');
     } catch (err: any) {
-      toast.error(err.message || 'Gửi lại mã OTP thất bại');
+      toast.error(getUserFacingError(err, 'Gửi lại mã OTP thất bại'));
     } finally {
       setResending(false);
     }
@@ -310,7 +322,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Form — 2-col grid for compact horizontal feel */}
-              <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+              <form data-guide="auth-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
 
                 {/* Row 1: Name + Email */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

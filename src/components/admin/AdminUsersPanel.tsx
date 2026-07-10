@@ -5,6 +5,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
+import { getUserFacingError } from '../../lib/userFacingError';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Modal from '../ui/Modal';
@@ -124,9 +125,8 @@ export default function AdminUsersPanel() {
       queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
-    onError: (err: any) => {
-      const message = err?.response?.data?.message || 'Không thể cập nhật gói tài khoản';
-      toast.error(message);
+    onError: (err: unknown) => {
+      toast.error(getUserFacingError(err, 'Không thể cập nhật gói tài khoản'));
     },
   });
 
