@@ -140,6 +140,17 @@ export default function CouplePlacesAdminPanel() {
     onError: () => toast.error('Không thể cập nhật review'),
   });
 
+  const deleteReviewMutation = useMutation({
+    mutationFn: ({ placeId, reviewId }: { placeId: number; reviewId: number }) =>
+      api.delete(`/admin/couple-places/${placeId}/reviews/${reviewId}`),
+    onSuccess: () => {
+      toast.success('Đã xóa vĩnh viễn review');
+      queryClient.invalidateQueries({ queryKey: ['admin-couple-place-reviews', selectedPlace?._id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-couple-places'] });
+    },
+    onError: () => toast.error('Không thể xóa review'),
+  });
+
   const places = placesQuery.data ?? [];
   const reports = reportsQuery.data ?? [];
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase('vi');
@@ -298,10 +309,11 @@ export default function CouplePlacesAdminPanel() {
                 loading={reviewsQuery.isLoading}
                 filter={reviewFilter}
                 page={reviewPage}
-                pending={reviewStatusMutation.isPending}
+                pending={reviewStatusMutation.isPending || deleteReviewMutation.isPending}
                 onFilter={(filter) => { setReviewFilter(filter); setReviewPage(0); }}
                 onPage={setReviewPage}
                 onStatus={(review, status) => selectedPlace._id && reviewStatusMutation.mutate({ placeId: selectedPlace._id, reviewId: review._id, status })}
+                onDelete={(review) => selectedPlace._id && window.confirm(`Xóa vĩnh viễn review của "${review.userName || 'Ẩn danh'}"?`) && deleteReviewMutation.mutate({ placeId: selectedPlace._id, reviewId: review._id })}
               />
             ) : (
               <InfoPanel
@@ -434,11 +446,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label className="block"><span className="mb-1 block text-[10px] font-black uppercase text-slate-400">{label}</span>{children}</label>;
 }
 
-function ReviewsPanel({ data, loading, filter, page, pending, onFilter, onPage, onStatus }: { data?: AdminCouplePlaceReviewPage; loading: boolean; filter: ReviewFilter; page: number; pending: boolean; onFilter: (filter: ReviewFilter) => void; onPage: (page: number) => void; onStatus: (review: CouplePlaceReview, status: 'PUBLISHED' | 'HIDDEN') => void }) {
+function ReviewsPanel({ data, loading, filter, page, pending, onFilter, onPage, onStatus, onDelete }: { data?: AdminCouplePlaceReviewPage; loading: boolean; filter: ReviewFilter; page: number; pending: boolean; onFilter: (filter: ReviewFilter) => void; onPage: (page: number) => void; onStatus: (review: CouplePlaceReview, status: 'PUBLISHED' | 'HIDDEN') => void; onDelete: (review: CouplePlaceReview) => void }) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 rounded-xl bg-slate-100 p-1 text-[10px] font-black">{(['ALL', 'PUBLISHED', 'HIDDEN'] as const).map((item) => <button key={item} type="button" onClick={() => onFilter(item)} className={`h-8 rounded-lg ${filter === item ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>{item === 'ALL' ? 'Tất cả' : item === 'PUBLISHED' ? 'Đang hiện' : 'Đang ẩn'}</button>)}</div>
-      {loading ? <div className="flex h-28 items-center justify-center"><Spinner size="sm" /></div> : !data?.items.length ? <div className="rounded-xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">Chưa có review phù hợp.</div> : <div className="space-y-2">{data.items.map((review) => <article key={review._id} className="rounded-xl border border-slate-100 bg-white p-3"><div className="flex items-start justify-between gap-2"><div><p className="text-xs font-black text-slate-800">{review.userName || 'Ẩn danh'}</p><p className="mt-0.5 text-[10px] font-bold text-amber-500">{'★'.repeat(review.rating)} <span className="text-slate-400">· {formatDate(review.createdAt)}</span></p></div><span className={`rounded-full px-2 py-1 text-[8px] font-black uppercase ${review.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{review.status}</span></div>{review.content && <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-slate-600">{review.content}</p>}<button type="button" disabled={pending} onClick={() => onStatus(review, review.status === 'PUBLISHED' ? 'HIDDEN' : 'PUBLISHED')} className="mt-2 flex h-7 items-center gap-1 rounded-lg bg-slate-100 px-2 text-[10px] font-bold text-slate-600 disabled:opacity-50">{review.status === 'PUBLISHED' ? <EyeSlash size={12} /> : <Eye size={12} />}{review.status === 'PUBLISHED' ? 'Ẩn review' : 'Hiện review'}</button></article>)}</div>}
+      {loading ? <div className="flex h-28 items-center justify-center"><Spinner size="sm" /></div> : !data?.items.length ? <div className="rounded-xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">Chưa có review phù hợp.</div> : <div className="space-y-2">{data.items.map((review) => <article key={review._id} className="rounded-xl border border-slate-100 bg-white p-3"><div className="flex items-start justify-between gap-2"><div><p className="text-xs font-black text-slate-800">{review.userName || 'Ẩn danh'}</p><p className="mt-0.5 text-[10px] font-bold text-amber-500">{'★'.repeat(review.rating)} <span className="text-slate-400">· {formatDate(review.createdAt)}</span></p></div><span className={`rounded-full px-2 py-1 text-[8px] font-black uppercase ${review.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{review.status}</span></div>{review.content && <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-slate-600">{review.content}</p>}<div className="mt-2 flex gap-2"><button type="button" disabled={pending} onClick={() => onStatus(review, review.status === 'PUBLISHED' ? 'HIDDEN' : 'PUBLISHED')} className="flex h-8 items-center gap-1 rounded-lg bg-slate-100 px-2.5 text-[10px] font-bold text-slate-600 disabled:opacity-50">{review.status === 'PUBLISHED' ? <EyeSlash size={12} /> : <Eye size={12} />}{review.status === 'PUBLISHED' ? 'Ẩn review' : 'Hiện review'}</button><button type="button" disabled={pending} onClick={() => onDelete(review)} className="flex h-8 items-center gap-1 rounded-lg bg-rose-50 px-2.5 text-[10px] font-bold text-rose-600 disabled:opacity-50"><Trash size={12} />Xóa</button></div></article>)}</div>}
       {data && data.total > data.limit && <div className="flex items-center justify-between"><span className="text-[10px] font-bold text-slate-400">Trang {page + 1} · {data.total} review</span><div className="flex gap-1"><button type="button" aria-label="Trang trước" disabled={page === 0} onClick={() => onPage(page - 1)} className="rounded-lg bg-slate-100 p-2 disabled:opacity-40"><CaretLeft size={13} /></button><button type="button" aria-label="Trang sau" disabled={!data.hasMore} onClick={() => onPage(page + 1)} className="rounded-lg bg-slate-100 p-2 disabled:opacity-40"><CaretRight size={13} /></button></div></div>}
     </div>
   );
