@@ -352,7 +352,7 @@ export default function SettingsPage() {
                   Chính sách Hủy gói
                 </h4>
                 <p className="text-[11px] leading-relaxed text-slate-500">
-                  Hi Pro và Hi Max được thanh toán cho thời hạn 30 hoặc 365 ngày. Bạn có thể dừng gói; quyền lợi đã thanh toán vẫn được giữ đến ngày hết hạn.
+                  Hi Pro và Hi Max có thời hạn 30 hoặc 365 ngày. Một người trong cặp đôi mua thì cả hai cùng dùng đến ngày hết hạn.
                 </p>
               </div>
               <div className="bg-slate-50/60 rounded-2xl border border-slate-100/70 p-4">

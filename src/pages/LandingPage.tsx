@@ -21,12 +21,116 @@ const HERO_AVATARS = [
 ];
 
 const HERO_IMAGE_PRIORITY = { fetchpriority: 'high' } as Record<string, string>;
+const BRAND_GRADIENT_TEXT = 'bg-gradient-to-r from-sky-400 via-violet-400 to-pink-400 bg-clip-text text-transparent';
+
+type FeatureVisual =
+  | 'cycle'
+  | 'ai'
+  | 'map'
+  | 'question'
+  | 'anniversary'
+  | 'mood'
+  | 'products'
+  | 'connection';
+
+const FEATURE_SHOWCASES: Array<{
+  title: string;
+  description: string;
+  icon: string;
+  visual: FeatureVisual;
+  cardClass: string;
+  iconClass: string;
+  visualClass: string;
+  delay: string;
+}> = [
+  {
+    title: 'Theo dõi chu kỳ',
+    description: 'Ghi nhận chu kỳ, dự đoán ngày quan trọng và xem lịch sức khỏe rõ ràng.',
+    icon: 'calendar_month',
+    visual: 'cycle',
+    cardClass: 'border-pink-100 bg-pink-50/60 hover:bg-pink-50',
+    iconClass: 'text-pink-500',
+    visualClass: 'from-pink-100 via-white to-rose-100',
+    delay: 'delay-100',
+  },
+  {
+    title: 'AI phân tích',
+    description: 'Hi AI tóm tắt xu hướng, gợi ý chăm sóc và trả lời bằng tiếng Việt.',
+    icon: 'psychology',
+    visual: 'ai',
+    cardClass: 'border-sky-100 bg-sky-50/60 hover:bg-sky-50',
+    iconClass: 'text-sky-500',
+    visualClass: 'from-sky-100 via-white to-violet-100',
+    delay: 'delay-200',
+  },
+  {
+    title: 'Couple Map',
+    description: 'Tìm quán ăn, cafe, điểm hẹn gần vị trí thật và lưu nơi muốn đi.',
+    icon: 'map',
+    visual: 'map',
+    cardClass: 'border-rose-100 bg-rose-50/60 hover:bg-rose-50',
+    iconClass: 'text-rose-500',
+    visualClass: 'from-rose-100 via-white to-orange-100',
+    delay: 'delay-300',
+  },
+  {
+    title: 'Câu hỏi cặp đôi',
+    description: 'Mỗi ngày một câu hỏi ngắn để cả hai hiểu suy nghĩ của nhau hơn.',
+    icon: 'forum',
+    visual: 'question',
+    cardClass: 'border-violet-100 bg-violet-50/60 hover:bg-violet-50',
+    iconClass: 'text-violet-500',
+    visualClass: 'from-violet-100 via-white to-pink-100',
+    delay: 'delay-400',
+  },
+  {
+    title: 'Kỷ niệm & lịch chung',
+    description: 'Lưu ngày bên nhau, sự kiện quan trọng và nhắc đúng thời điểm.',
+    icon: 'event_heart',
+    visual: 'anniversary',
+    cardClass: 'border-blue-100 bg-blue-50/60 hover:bg-blue-50',
+    iconClass: 'text-blue-500',
+    visualClass: 'from-blue-100 via-white to-sky-100',
+    delay: 'delay-100',
+  },
+  {
+    title: 'Nhật ký cảm xúc',
+    description: 'Ghi nhanh tâm trạng và gửi tín hiệu quan tâm tinh tế cho Người ấy.',
+    icon: 'mood',
+    visual: 'mood',
+    cardClass: 'border-amber-100 bg-amber-50/60 hover:bg-amber-50',
+    iconClass: 'text-amber-500',
+    visualClass: 'from-amber-100 via-white to-yellow-100',
+    delay: 'delay-200',
+  },
+  {
+    title: 'Gợi ý sản phẩm',
+    description: 'Khám phá sản phẩm chăm sóc phù hợp theo nhu cầu và từng giai đoạn.',
+    icon: 'shopping_bag',
+    visual: 'products',
+    cardClass: 'border-emerald-100 bg-emerald-50/60 hover:bg-emerald-50',
+    iconClass: 'text-emerald-500',
+    visualClass: 'from-emerald-100 via-white to-teal-100',
+    delay: 'delay-300',
+  },
+  {
+    title: 'Kết nối yêu thương',
+    description: 'Chia sẻ dữ liệu cần thiết để người ấy chăm sóc bạn đúng lúc hơn.',
+    icon: 'favorite',
+    visual: 'connection',
+    cardClass: 'border-purple-100 bg-purple-50/60 hover:bg-purple-50',
+    iconClass: 'text-purple-500',
+    visualClass: 'from-purple-100 via-white to-pink-100',
+    delay: 'delay-400',
+  },
+];
 
 const LANDING_PLANS = [
   {
     name: 'Đồng Hành Cơ Bản',
+    displayName: 'ĐỒNG HÀNH',
     price: '0đ',
-    description: 'Bắt đầu theo dõi sức khỏe sinh sản cá nhân.',
+    description: 'Dành cho cặp đôi bắt đầu chăm sóc nhau mỗi ngày.',
     features: [...FREE_PLAN_FEATURES],
     to: '/register',
     cta: 'Bắt đầu miễn phí',
@@ -34,10 +138,11 @@ const LANDING_PLANS = [
   },
   {
     name: 'Hi Pro',
+    displayName: 'HI PRO',
     planId: 'monthly' as const,
     price: '49.000đ',
     suffix: '/tháng',
-    description: 'Mở khóa phân tích nâng cao và AI chăm sóc sâu hơn.',
+    description: 'Một người mua, cả hai cùng dùng AI và phân tích nâng cao.',
     features: [...PREMIUM_PLAN_FEATURES],
     to: '/register?plan=monthly',
     cta: 'Chọn Hi Pro',
@@ -45,17 +150,167 @@ const LANDING_PLANS = [
   },
   {
     name: 'Hi Max',
+    displayName: 'HI MAX',
     planId: 'yearly' as const,
     price: '399.000đ',
     suffix: '/năm',
     badge: 'Tiết kiệm 32%',
-    description: 'Tối ưu cho người dùng muốn theo dõi dài hạn.',
+    description: 'Một người mua, cả hai dùng trọn năm với giá tiết kiệm.',
     features: [...PREMIUM_YEARLY_FEATURES],
     to: '/register?plan=yearly',
     cta: 'Chọn Hi Max',
     highlight: false,
   },
 ];
+
+function FeatureMockup({ type }: { type: FeatureVisual }) {
+  switch (type) {
+    case 'cycle':
+      return (
+        <div className="grid h-full grid-cols-7 gap-1.5 p-4">
+          {Array.from({ length: 21 }).map((_, index) => {
+            const active = [8, 9, 10, 15].includes(index);
+            return (
+              <div
+                key={index}
+                className={`grid place-items-center rounded-lg text-[10px] font-black ${
+                  active ? 'bg-pink-400 text-white shadow-sm' : 'bg-white/80 text-slate-400'
+                }`}
+              >
+                {index + 1}
+              </div>
+            );
+          })}
+        </div>
+      );
+    case 'ai':
+      return (
+        <div className="flex h-full flex-col justify-center gap-3 p-4">
+          <div className="ml-auto max-w-[76%] rounded-2xl bg-white/90 px-3 py-2 text-xs font-bold text-slate-600 shadow-sm">
+            Hôm nay cần chăm sóc gì?
+          </div>
+          <div className="max-w-[86%] rounded-2xl bg-gradient-to-r from-sky-400 to-pink-400 px-3 py-2 text-xs font-bold text-white shadow-sm">
+            Nghỉ sớm hơn, uống nước ấm và theo dõi tâm trạng.
+          </div>
+          <div className="flex gap-2">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[10px] font-black text-sky-600">Chu kỳ</span>
+            <span className="rounded-full bg-white/80 px-3 py-1 text-[10px] font-black text-pink-600">Cảm xúc</span>
+          </div>
+        </div>
+      );
+    case 'map':
+      return (
+        <div className="relative h-full overflow-hidden p-4">
+          <div className="absolute inset-0 opacity-50">
+            <div className="absolute left-4 top-8 h-1 w-44 rotate-12 rounded-full bg-amber-300" />
+            <div className="absolute bottom-8 right-2 h-1 w-52 -rotate-12 rounded-full bg-sky-300" />
+            <div className="absolute left-12 top-4 h-32 w-1 rotate-12 rounded-full bg-white" />
+            <div className="absolute right-12 top-5 h-36 w-1 -rotate-12 rounded-full bg-white" />
+          </div>
+          <div className="relative ml-auto w-fit rounded-2xl bg-white/90 px-3 py-2 text-xs font-black text-slate-700 shadow-sm">
+            Cafe 1.2 km
+          </div>
+          <div className="absolute bottom-5 left-6 rounded-2xl bg-white/95 p-3 shadow-lg">
+            <div className="flex items-center gap-2">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-rose-500 text-white">
+                <span className="material-symbols-outlined text-[18px]">location_on</span>
+              </span>
+              <div>
+                <p className="text-xs font-black text-slate-900">Điểm hẹn gần bạn</p>
+                <p className="text-[10px] font-bold text-slate-400">Ăn uống • Cafe • Hẹn hò</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    case 'question':
+      return (
+        <div className="flex h-full flex-col justify-center gap-3 p-4">
+          <div className="rounded-2xl bg-white/90 p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-wide text-violet-400">Câu hỏi hôm nay</p>
+            <p className="mt-2 text-sm font-black leading-snug text-slate-800">Nếu tối nay rảnh, hai người muốn làm gì?</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <span className="rounded-xl bg-emerald-100 px-3 py-2 text-center text-[10px] font-black text-emerald-700">Bạn đã trả lời</span>
+            <span className="rounded-xl bg-pink-100 px-3 py-2 text-center text-[10px] font-black text-pink-700">Người ấy đã trả lời</span>
+          </div>
+        </div>
+      );
+    case 'anniversary':
+      return (
+        <div className="flex h-full items-center justify-center p-4">
+          <div className="w-full rounded-3xl bg-white/90 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-black text-slate-500">Ngày bên nhau</p>
+              <span className="material-symbols-outlined text-pink-400">favorite</span>
+            </div>
+            <p className="mt-2 text-4xl font-black text-slate-900">906</p>
+            <div className="mt-3 rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-600">
+              Kỷ niệm tháng này • 2 sự kiện
+            </div>
+          </div>
+        </div>
+      );
+    case 'mood':
+      return (
+        <div className="flex h-full flex-col justify-center gap-3 p-4">
+          <div className="grid grid-cols-3 gap-2">
+            {['Vui', 'Mệt', 'Cần ôm'].map((mood, index) => (
+              <span key={mood} className={`rounded-2xl px-3 py-4 text-center text-xs font-black shadow-sm ${index === 2 ? 'bg-pink-400 text-white' : 'bg-white/90 text-slate-600'}`}>
+                {mood}
+              </span>
+            ))}
+          </div>
+          <div className="rounded-2xl bg-white/90 px-3 py-3 text-xs font-bold text-slate-600 shadow-sm">
+            Đã gửi tín hiệu quan tâm cho Người ấy.
+          </div>
+        </div>
+      );
+    case 'products':
+      return (
+        <div className="grid h-full grid-cols-2 gap-3 p-4">
+          {['Vitamin', 'Chườm ấm', 'Quà nhỏ', 'Wellness'].map((item) => (
+            <div key={item} className="flex flex-col justify-between rounded-2xl bg-white/90 p-3 shadow-sm">
+              <span className="material-symbols-outlined text-emerald-500">shopping_bag</span>
+              <p className="text-xs font-black text-slate-700">{item}</p>
+            </div>
+          ))}
+        </div>
+      );
+    case 'connection':
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
+          <div className="flex items-center gap-3">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-pink-300 to-rose-100 text-lg font-black text-pink-700 shadow-sm">N</span>
+            <span className="material-symbols-outlined text-pink-400">favorite</span>
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-sky-300 to-violet-100 text-lg font-black text-sky-700 shadow-sm">M</span>
+          </div>
+          <div className="rounded-2xl bg-white/90 px-4 py-3 text-center text-xs font-black text-slate-600 shadow-sm">
+            Đồng bộ nhắc nhở, cảm xúc và lịch chung
+          </div>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
+function FeatureShowcaseCard({ feature }: { feature: (typeof FEATURE_SHOWCASES)[number] }) {
+  return (
+    <div className={`group flex min-h-[360px] flex-col overflow-hidden rounded-[2rem] border p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-100 bento-card-hover animate-fade-in-up ${feature.cardClass} ${feature.delay}`}>
+      <div className={`relative h-44 overflow-hidden rounded-[1.5rem] bg-gradient-to-br ${feature.visualClass}`}>
+        <FeatureMockup type={feature.visual} />
+      </div>
+      <div className="flex flex-1 flex-col gap-3 px-2 pt-5">
+        <div className={`grid h-11 w-11 place-items-center rounded-2xl bg-white shadow-sm ${feature.iconClass}`}>
+          <span className="material-symbols-outlined text-[26px]">{feature.icon}</span>
+        </div>
+        <h3 className="text-xl font-black leading-tight text-slate-900">{feature.title}</h3>
+        <p className="text-sm font-medium leading-relaxed text-slate-500">{feature.description}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const { data: pricing = FALLBACK_PRICING } = usePlanPricing();
@@ -185,88 +440,10 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              {/* Row 1 — 3 cols */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full">
-                {/* Theo dõi chu kỳ */}
-                <div className="group flex flex-col gap-5 rounded-2xl border border-pink-100 bg-pink-50/50 p-7 bento-card-hover hover:bg-pink-50 transition-all duration-300 animate-fade-in-up delay-100">
-                  <div className="w-12 h-12 rounded-2xl bg-white text-pink-500 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-[28px]">calendar_month</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-slate-900 text-lg font-bold">Theo dõi chu kỳ</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed">Ghi nhận và theo dõi chu kỳ kinh nguyệt chính xác, dự đoán ngày tiếp theo và pha rụng trứng.</p>
-                  </div>
-                </div>
-
-                {/* Nhắc nhở */}
-                <div className="group flex flex-col gap-5 rounded-2xl border border-purple-100 bg-purple-50/50 p-7 bento-card-hover hover:bg-purple-50 transition-all duration-300 animate-fade-in-up delay-200">
-                  <div className="w-12 h-12 rounded-2xl bg-white text-purple-500 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-[28px]">notifications_active</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-slate-900 text-lg font-bold">Nhắc nhở thông minh</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed">Thông báo dịu dàng về chu kỳ, uống thuốc, ngày đặc biệt — gửi đến cả bạn lẫn người ấy.</p>
-                  </div>
-                </div>
-
-                {/* AI Phân tích */}
-                <div className="group flex flex-col gap-5 rounded-2xl border border-sky-100 bg-sky-50/50 p-7 bento-card-hover hover:bg-sky-50 transition-all duration-300 animate-fade-in-up delay-300">
-                  <div className="w-12 h-12 rounded-2xl bg-white text-sky-500 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-[28px]">psychology</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-slate-900 text-lg font-bold">AI Phân tích</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed">Trí tuệ nhân tạo dự đoán chu kỳ, phân tích tâm trạng và đưa ra gợi ý cá nhân hóa chính xác.</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2 — 4 cols */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 w-full">
-                {/* Love Translator */}
-                <div className="group flex flex-col gap-5 rounded-2xl border border-rose-100 bg-rose-50/50 p-7 bento-card-hover hover:bg-rose-50 transition-all duration-300 animate-fade-in-up delay-100">
-                  <div className="w-12 h-12 rounded-2xl bg-white text-rose-500 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-[28px]">translate</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-slate-900 text-lg font-bold">Love Translator</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed">Giúp người ấy "dịch" cảm xúc và hiểu bạn hơn qua từng giai đoạn chu kỳ.</p>
-                  </div>
-                </div>
-
-                {/* Kết nối yêu thương */}
-                <div className="group flex flex-col gap-5 rounded-2xl border border-blue-100 bg-blue-50/50 p-7 bento-card-hover hover:bg-blue-50 transition-all duration-300 animate-fade-in-up delay-200">
-                  <div className="w-12 h-12 rounded-2xl bg-white text-blue-500 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-[28px]">favorite</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-slate-900 text-lg font-bold">Kết nối yêu thương</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed">Đồng bộ dữ liệu để cả hai cùng chia sẻ và người ấy nhận gợi ý quan tâm đúng lúc.</p>
-                  </div>
-                </div>
-
-                {/* Lời khuyên mỗi ngày */}
-                <div className="group flex flex-col gap-5 rounded-2xl border border-yellow-100 bg-yellow-50/50 p-7 bento-card-hover hover:bg-yellow-50 transition-all duration-300 animate-fade-in-up delay-300">
-                  <div className="w-12 h-12 rounded-2xl bg-white text-yellow-500 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-[28px]">tips_and_updates</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-slate-900 text-lg font-bold">Lời khuyên mỗi ngày</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed">Nhận lời khuyên sức khỏe và cảm xúc cá nhân hóa hằng ngày từ AI.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Gợi ý sản phẩm */}
-                <div className="group flex flex-col gap-5 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-7 bento-card-hover hover:bg-emerald-50 transition-all duration-300 animate-fade-in-up delay-400">
-                  <div className="w-12 h-12 rounded-2xl bg-white text-emerald-500 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-[28px]">shopping_bag</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-slate-900 text-lg font-bold">Gợi ý sản phẩm</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed">Đề xuất sản phẩm chăm sóc sức khỏe phù hợp với từng giai đoạn chu kỳ của bạn.</p>
-                  </div>
-                </div>
+              <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {FEATURE_SHOWCASES.map((feature) => (
+                  <FeatureShowcaseCard key={feature.title} feature={feature} />
+                ))}
               </div>
 
             </div>
@@ -357,7 +534,7 @@ export default function LandingPage() {
                 Chọn nhịp chăm sóc phù hợp với bạn
               </h2>
               <p className="text-base font-medium leading-relaxed text-slate-500 md:text-lg">
-                Free mở toàn bộ công cụ chăm sóc sức khỏe hằng ngày. Hi Pro và Hi Max mở hạn mức AI cao hơn, phân tích chuyên sâu và trải nghiệm cặp đôi nâng cao.
+                Chỉ cần một người trong cặp đôi mua Hi Pro hoặc Hi Max, cả hai cùng dùng quyền lợi Premium.
               </p>
             </div>
 
@@ -379,7 +556,7 @@ export default function LandingPage() {
                       </span>
                     )}
                     <div className="mb-6">
-                      <h3 className="text-center text-2xl font-black text-slate-900">{plan.name}</h3>
+                      <h3 className={`text-center text-2xl font-black tracking-tight ${BRAND_GRADIENT_TEXT}`}>{plan.displayName}</h3>
                       <p className="mt-2 min-h-[48px] text-sm font-medium leading-relaxed text-slate-500">{plan.description}</p>
                     </div>
 

@@ -92,7 +92,7 @@ export default function AdminUsersPanel() {
   const deleteUserMutation = useMutation({
     mutationFn: (userId: string) => api.delete(`/admin/users/${userId}`),
     onSuccess: () => {
-      toast.success('Đã xóa mềm tài khoản');
+      toast.success('Đã xóa vĩnh viễn tài khoản');
       setPendingAction(null);
       queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -361,7 +361,7 @@ export default function AdminUsersPanel() {
               <Input label="Lý do khóa" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Vi phạm chính sách sử dụng" />
             )}
             {pendingAction.type === 'delete' && (
-              <p className="rounded-xl bg-rose-50 p-3 text-rose-700">Tài khoản sẽ bị xóa mềm và không thể đăng nhập.</p>
+              <p className="rounded-xl bg-rose-50 p-3 text-rose-700">Tài khoản sẽ bị xóa vĩnh viễn khỏi database. Thao tác này không thể hoàn tác.</p>
             )}
           </div>
         ) : null}

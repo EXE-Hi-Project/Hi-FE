@@ -34,7 +34,7 @@ const CONTENT: Record<LegalKind, {
         title: '3. Tài khoản và bảo mật',
         body: [
           'Bạn chịu trách nhiệm giữ an toàn thông tin đăng nhập và không chia sẻ tài khoản cho người khác.',
-          'Admin có thể khóa hoặc xóa mềm tài khoản khi phát hiện lạm dụng, vi phạm hoặc yêu cầu hỗ trợ hợp lệ.',
+          'Admin có thể khóa hoặc xóa vĩnh viễn tài khoản khi phát hiện lạm dụng, vi phạm hoặc yêu cầu hỗ trợ hợp lệ.',
         ],
       },
       {
@@ -47,7 +47,7 @@ const CONTENT: Record<LegalKind, {
       {
         title: '5. Gói Đồng Hành và thanh toán',
         body: [
-          'Gói Free gồm đầy đủ công cụ chăm sóc sức khỏe, cá nhân hóa AI và nhắc nhở. Hi Pro và Hi Max mở hạn mức AI cao hơn, phân tích chuyên sâu và trải nghiệm cặp đôi nâng cao.',
+          'Gói Free gồm công cụ chăm sóc hằng ngày. Với Hi Pro hoặc Hi Max, chỉ cần một người trong cặp đôi mua thì cả hai cùng dùng quyền lợi Premium.',
           'Chính sách hủy, hoàn tiền và thời hạn gói có thể được cập nhật theo cổng thanh toán đang dùng.',
         ],
       },
@@ -91,7 +91,7 @@ const CONTENT: Record<LegalKind, {
         title: '5. Liên hệ và quyền của bạn',
         body: [
           'Bạn có thể yêu cầu hỗ trợ, cập nhật hoặc xử lý dữ liệu qua email hilover.space@gmail.com.',
-          'Trong MVP, thao tác xóa tài khoản là xóa mềm để tránh mất dữ liệu sức khỏe và phục vụ đối soát khi cần.',
+          'Khi tài khoản bị xóa vĩnh viễn, bản ghi tài khoản sẽ bị gỡ khỏi database và không thể đăng nhập lại bằng tài khoản đó.',
         ],
       },
     ],

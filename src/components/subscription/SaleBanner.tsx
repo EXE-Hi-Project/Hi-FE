@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { ArrowRight, Tag } from '@phosphor-icons/react';
 import { formatPlanPrice, usePlanPricing } from '../../hooks/usePlanPricing';
 
@@ -20,9 +19,9 @@ export default function SaleBanner() {
           </p>
         </div>
       </div>
-      <Link to="/settings#pricing" className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-500 px-4 text-xs font-extrabold text-white hover:bg-rose-600">
+      <a href="#pricing" className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-500 px-4 text-xs font-extrabold text-white hover:bg-rose-600">
         Xem ưu đãi <ArrowRight size={15} />
-      </Link>
+      </a>
     </section>
   );
 }

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarBlank, CheckCircle, Clock, PencilSimple, Tag } from '@phosphor-icons/react';
-import { z } from 'zod';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import api from '../../lib/api';
+import { z } from 'zod';
 import { formatPlanPrice, type SaleCampaignView } from '../../hooks/usePlanPricing';
+import api from '../../lib/api';
 
 interface AdminPricing {
   hiProBasePrice: number;
@@ -22,8 +22,8 @@ const saleSchema = z.object({
   name: z.string().trim().min(2).max(80),
   title: z.string().trim().min(2).max(100),
   subtitle: z.string().trim().max(180),
-  hiProSalePrice: z.coerce.number().int().min(1000, 'Giá sale Hi Pro phải lớn hơn 0'),
-  hiMaxSalePrice: z.coerce.number().int().min(1000, 'Giá sale Hi Max phải lớn hơn 0'),
+  hiProSalePrice: z.coerce.number().int().min(0, 'Giá sale Hi Pro không được âm'),
+  hiMaxSalePrice: z.coerce.number().int().min(0, 'Giá sale Hi Max không được âm'),
   startsAt: z.string().min(1),
   endsAt: z.string().min(1),
 }).refine((value) => new Date(value.endsAt) > new Date(value.startsAt), {
@@ -40,7 +40,13 @@ function dateTimeLocal(date: Date) {
 }
 
 function statusLabel(status: SaleCampaignView['status']) {
-  return { DRAFT: 'Bản nháp', SCHEDULED: 'Đã lên lịch', ACTIVE: 'Đang chạy', ENDED: 'Đã kết thúc', DISABLED: 'Đã tắt' }[status];
+  return {
+    DRAFT: 'Bản nháp',
+    SCHEDULED: 'Đã lên lịch',
+    ACTIVE: 'Đang chạy',
+    ENDED: 'Đã kết thúc',
+    DISABLED: 'Đã tắt',
+  }[status];
 }
 
 function parseVndInput(value: string) {
@@ -48,18 +54,20 @@ function parseVndInput(value: string) {
 }
 
 function formatVndInput(value: unknown) {
-  const numeric = Number(String(value ?? '').replace(/[^0-9]/g, '')) || 0;
-  return numeric > 0 ? numeric.toLocaleString('vi-VN') : '';
+  if (value === '' || value === null || value === undefined) return '';
+  const numeric = Number(String(value).replace(/[^0-9]/g, '')) || 0;
+  return numeric.toLocaleString('vi-VN');
 }
 
 function moneyHint(value: unknown) {
-  const numeric = Number(value) || 0;
-  return numeric > 0 ? formatPlanPrice(numeric) : 'Nhập giá VNĐ';
+  if (value === '' || value === null || value === undefined) return 'Nhập giá VNĐ';
+  return formatPlanPrice(Number(value) || 0);
 }
 
 export default function AdminPricingPanel() {
   const queryClient = useQueryClient();
   const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
+
   const pricingQuery = useQuery<AdminPricing>({
     queryKey: ['admin-plan-pricing'],
     queryFn: () => api.get('/admin/plans/pricing').then(({ data }) => data.data as AdminPricing),
@@ -73,13 +81,16 @@ export default function AdminPricingPanel() {
     resolver: zodResolver(priceSchema),
     defaultValues: { hiProBasePrice: 49_000, hiMaxBasePrice: 399_000 },
   });
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  const nextWeek = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000);
   const saleForm = useForm<SaleForm>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
-      name: '', title: '', subtitle: '', hiProSalePrice: 39_000, hiMaxSalePrice: 299_000,
-      startsAt: dateTimeLocal(tomorrow), endsAt: dateTimeLocal(nextWeek),
+      name: '',
+      title: '',
+      subtitle: '',
+      hiProSalePrice: 39_000,
+      hiMaxSalePrice: 299_000,
+      startsAt: dateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+      endsAt: dateTimeLocal(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000)),
     },
   });
 
@@ -96,9 +107,13 @@ export default function AdminPricingPanel() {
 
   const priceMutation = useMutation({
     mutationFn: (values: PriceForm) => api.put('/admin/plans/pricing', values),
-    onSuccess: () => { refresh(); toast.success('Đã cập nhật giá gốc'); },
+    onSuccess: () => {
+      refresh();
+      toast.success('Đã cập nhật giá gốc');
+    },
     onError: () => toast.error('Không thể cập nhật giá gốc'),
   });
+
   const saleMutation = useMutation({
     mutationFn: async ({ values, activate }: { values: SaleForm; activate: boolean }) => {
       const payload = {
@@ -106,11 +121,11 @@ export default function AdminPricingPanel() {
         startsAt: new Date(values.startsAt).toISOString(),
         endsAt: new Date(values.endsAt).toISOString(),
       };
-      const saved = editingSaleId ? await api.put(`/admin/sales/${editingSaleId}`, payload) : await api.post('/admin/sales', payload);
+      const saved = editingSaleId
+        ? await api.put(`/admin/sales/${editingSaleId}`, payload)
+        : await api.post('/admin/sales', payload);
       const saleId = saved.data?.data?.id || editingSaleId;
-      if (activate && saleId) {
-        return api.post(`/admin/sales/${saleId}/activate`);
-      }
+      if (activate && saleId) return api.post(`/admin/sales/${saleId}/activate`);
       return saved;
     },
     onSuccess: (_data, variables) => {
@@ -121,9 +136,13 @@ export default function AdminPricingPanel() {
     },
     onError: () => toast.error('Không thể lưu chiến dịch sale'),
   });
+
   const statusMutation = useMutation({
     mutationFn: ({ id, action }: { id: string; action: 'activate' | 'disable' }) => api.post(`/admin/sales/${id}/${action}`),
-    onSuccess: () => { refresh(); toast.success('Đã cập nhật trạng thái chiến dịch'); },
+    onSuccess: () => {
+      refresh();
+      toast.success('Đã cập nhật trạng thái chiến dịch');
+    },
     onError: () => toast.error('Không thể cập nhật chiến dịch'),
   });
 
@@ -166,8 +185,8 @@ export default function AdminPricingPanel() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {[
-            { name: 'Hi Pro', base: pricing.hiProBasePrice, sale: Number(watchedSale.hiProSalePrice) || pricing.hiProBasePrice, period: '30 ngày' },
-            { name: 'Hi Max', base: pricing.hiMaxBasePrice, sale: Number(watchedSale.hiMaxSalePrice) || pricing.hiMaxBasePrice, period: '365 ngày' },
+            { name: 'Hi Pro', base: pricing.hiProBasePrice, sale: Number(watchedSale.hiProSalePrice), period: '30 ngày' },
+            { name: 'Hi Max', base: pricing.hiMaxBasePrice, sale: Number(watchedSale.hiMaxSalePrice), period: '365 ngày' },
           ].map((plan) => (
             <article key={plan.name} className="flex min-h-48 flex-col justify-between rounded-2xl border border-rose-100 bg-white p-5 shadow-sm">
               <div>
@@ -177,7 +196,7 @@ export default function AdminPricingPanel() {
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-400 line-through">{formatPlanPrice(plan.base)}</p>
-                <p className="text-3xl font-black text-rose-600">{formatPlanPrice(plan.sale)}</p>
+                <p className="text-3xl font-black text-rose-600">{formatPlanPrice(Number.isFinite(plan.sale) ? plan.sale : plan.base)}</p>
               </div>
             </article>
           ))}
@@ -185,13 +204,30 @@ export default function AdminPricingPanel() {
       </div>
 
       <form onSubmit={saleForm.handleSubmit((values) => saleMutation.mutate({ values, activate: false }))} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-3"><Tag size={22} className="text-rose-600" /><h3 className="text-lg font-extrabold text-slate-900">Tạo chiến dịch sale</h3></div>
+        <div className="flex items-center gap-3">
+          <Tag size={22} className="text-rose-600" />
+          <h3 className="text-lg font-extrabold text-slate-900">Tạo chiến dịch sale</h3>
+        </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label className="block"><span className="text-xs font-bold text-slate-500">Tên nội bộ</span><input {...saleForm.register('name')} className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-rose-300" /></label>
           <label className="block"><span className="text-xs font-bold text-slate-500">Tiêu đề hiển thị</span><input {...saleForm.register('title')} className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-rose-300" /></label>
           <label className="block"><span className="text-xs font-bold text-slate-500">Mô tả ngắn</span><input {...saleForm.register('subtitle')} className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-rose-300" /></label>
-          <label className="block"><span className="text-xs font-bold text-slate-500">Giá sale Hi Pro</span><div className="relative mt-2"><input type="text" inputMode="numeric" value={formatVndInput(saleForm.watch('hiProSalePrice'))} onChange={(event) => saleForm.setValue('hiProSalePrice', parseVndInput(event.target.value), { shouldDirty: true, shouldValidate: true })} className="min-h-11 w-full rounded-xl border border-slate-200 px-3 pr-14 text-sm font-bold outline-none focus:border-rose-300" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400">VNĐ</span></div><p className="mt-1 text-[11px] font-semibold text-slate-400">{moneyHint(saleForm.watch('hiProSalePrice'))}</p></label>
-          <label className="block"><span className="text-xs font-bold text-slate-500">Giá sale Hi Max</span><div className="relative mt-2"><input type="text" inputMode="numeric" value={formatVndInput(saleForm.watch('hiMaxSalePrice'))} onChange={(event) => saleForm.setValue('hiMaxSalePrice', parseVndInput(event.target.value), { shouldDirty: true, shouldValidate: true })} className="min-h-11 w-full rounded-xl border border-slate-200 px-3 pr-14 text-sm font-bold outline-none focus:border-rose-300" /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400">VNĐ</span></div><p className="mt-1 text-[11px] font-semibold text-slate-400">{moneyHint(saleForm.watch('hiMaxSalePrice'))}</p></label>
+          <label className="block">
+            <span className="text-xs font-bold text-slate-500">Giá sale Hi Pro</span>
+            <div className="relative mt-2">
+              <input type="text" inputMode="numeric" value={formatVndInput(saleForm.watch('hiProSalePrice'))} onChange={(event) => saleForm.setValue('hiProSalePrice', parseVndInput(event.target.value), { shouldDirty: true, shouldValidate: true })} className="min-h-11 w-full rounded-xl border border-slate-200 px-3 pr-14 text-sm font-bold outline-none focus:border-rose-300" />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400">VNĐ</span>
+            </div>
+            <p className="mt-1 text-[11px] font-semibold text-slate-400">{moneyHint(saleForm.watch('hiProSalePrice'))}</p>
+          </label>
+          <label className="block">
+            <span className="text-xs font-bold text-slate-500">Giá sale Hi Max</span>
+            <div className="relative mt-2">
+              <input type="text" inputMode="numeric" value={formatVndInput(saleForm.watch('hiMaxSalePrice'))} onChange={(event) => saleForm.setValue('hiMaxSalePrice', parseVndInput(event.target.value), { shouldDirty: true, shouldValidate: true })} className="min-h-11 w-full rounded-xl border border-slate-200 px-3 pr-14 text-sm font-bold outline-none focus:border-rose-300" />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400">VNĐ</span>
+            </div>
+            <p className="mt-1 text-[11px] font-semibold text-slate-400">{moneyHint(saleForm.watch('hiMaxSalePrice'))}</p>
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <label><span className="text-xs font-bold text-slate-500">Bắt đầu</span><input type="datetime-local" {...saleForm.register('startsAt')} className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 px-2 text-xs outline-none" /></label>
             <label><span className="text-xs font-bold text-slate-500">Kết thúc</span><input type="datetime-local" {...saleForm.register('endsAt')} className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 px-2 text-xs outline-none" /></label>
@@ -211,10 +247,16 @@ export default function AdminPricingPanel() {
           {(salesQuery.data ?? []).map((sale) => (
             <article key={sale.id} className="flex flex-col gap-4 rounded-xl border border-slate-100 p-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2"><p className="font-bold text-slate-900">{sale.name}</p><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">{statusLabel(sale.status)}</span></div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-bold text-slate-900">{sale.name}</p>
+                  <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">{statusLabel(sale.status)}</span>
+                </div>
                 <p className="mt-1 text-sm text-slate-500">{sale.title}</p>
                 <p className="mt-2 text-xs font-bold text-slate-500">Hi Pro: {formatPlanPrice(sale.hiProSalePrice)} · Hi Max: {formatPlanPrice(sale.hiMaxSalePrice)}</p>
-                <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold text-slate-500"><span className="inline-flex items-center gap-1"><CalendarBlank size={14} />{new Date(sale.startsAt).toLocaleString('vi-VN')}</span><span className="inline-flex items-center gap-1"><Clock size={14} />{new Date(sale.endsAt).toLocaleString('vi-VN')}</span></div>
+                <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold text-slate-500">
+                  <span className="inline-flex items-center gap-1"><CalendarBlank size={14} />{new Date(sale.startsAt).toLocaleString('vi-VN')}</span>
+                  <span className="inline-flex items-center gap-1"><Clock size={14} />{new Date(sale.endsAt).toLocaleString('vi-VN')}</span>
+                </div>
               </div>
               <div className="flex shrink-0 gap-2">
                 {sale.status !== 'ENDED' ? <button type="button" onClick={() => {

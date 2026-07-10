@@ -535,7 +535,7 @@ export default function FemaleDashboardPage() {
                   <PremiumLockCard
                     compact
                     title="Mở phân tích chu kỳ chuyên sâu"
-                    description="Hi Pro và Hi Max bổ sung điểm ổn định, độ tin cậy, xu hướng dài hạn và phân tích triệu chứng."
+                    description="Một người trong cặp đôi mua Hi Pro hoặc Hi Max, cả hai cùng dùng phân tích nâng cao."
                   />
                   <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
                     <p className="text-[10px] font-black uppercase tracking-wider text-violet-500">Rụng trứng ước tính</p>
