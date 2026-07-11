@@ -6,6 +6,7 @@ import { consumeGoogleOAuthRedirect } from './lib/googleAuth';
 import { getUserFacingError } from './lib/userFacingError';
 import { getOrCreateSessionId, trackEvent } from './utils/analytics';
 import UserGuideProvider from './components/onboarding/UserGuideProvider';
+import MaintenanceGate from './components/maintenance/MaintenanceGate';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -194,9 +195,10 @@ export default function App() {
   }, [location.hash, socialLogin, navigate]);
 
   return (
-    <UserGuideProvider>
-      <Suspense fallback={<RouteFallback />}>
-      <Routes>
+    <MaintenanceGate>
+      <UserGuideProvider>
+        <Suspense fallback={<RouteFallback />}>
+        <Routes>
       <Route path="/" element={<HomeRoute />} />
       <Route path="/login" element={<AuthRoute><LoginPage /></AuthRoute>} />
       <Route path="/register" element={<AuthRoute><RegisterPage /></AuthRoute>} />
@@ -233,9 +235,10 @@ export default function App() {
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       </Route>
-      </Routes>
-      </Suspense>
-      <FloatingHiChatGate />
-    </UserGuideProvider>
+        </Routes>
+        </Suspense>
+        <FloatingHiChatGate />
+      </UserGuideProvider>
+    </MaintenanceGate>
   );
 }

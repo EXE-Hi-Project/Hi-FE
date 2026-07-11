@@ -92,6 +92,11 @@ api.interceptors.response.use(
       });
     }
 
+    if (err.response?.status === 503 && err.response?.data?.data?.code === 'MAINTENANCE_ACTIVE') {
+      window.dispatchEvent(new Event('hi:maintenance-active'));
+      return Promise.reject(err);
+    }
+
     if (err.response?.status === 403 && err.config && isUnsafeMethod(err.config.method)) {
       csrfToken = null;
     }

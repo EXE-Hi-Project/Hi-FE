@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import api from '../../lib/api';
 import AdminPanelSkeleton from './AdminPanelSkeleton';
+import AdminMaintenancePanel from './AdminMaintenancePanel';
 
 type HealthStatus = 'HEALTHY' | 'DEGRADED' | 'UNAVAILABLE' | 'NOT_CONFIGURED';
 
@@ -60,6 +61,7 @@ export default function AdminSystemPanel() {
     }));
   return (
     <div className="space-y-6">
+      <AdminMaintenancePanel />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-extrabold text-slate-950">Trạng thái hệ thống</h2>
