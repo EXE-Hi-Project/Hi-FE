@@ -24,14 +24,6 @@ function storageKey(userId: string, routeKey: string) {
   return `${STORAGE_PREFIX}:${userId}:${routeKey}`;
 }
 
-function hasCompletedGuide(userId: string, routeKey: string) {
-  try {
-    return localStorage.getItem(storageKey(userId, routeKey)) === 'done';
-  } catch {
-    return false;
-  }
-}
-
 function markGuideCompleted(userId: string, routeKey: string) {
   try {
     localStorage.setItem(storageKey(userId, routeKey), 'done');
@@ -302,7 +294,6 @@ export default function UserGuideProvider({ children }: { children: ReactNode })
   const { user, isBootstrapping } = useAuthStore();
   const [active, setActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
-  const manuallyOpenedRef = useRef(false);
 
   const userId = user?._id ?? 'guest';
   const blocked = isBootstrapping || location.pathname.startsWith('/admin') || user?.role === 'admin';
@@ -316,12 +307,10 @@ export default function UserGuideProvider({ children }: { children: ReactNode })
     markGuideCompleted(userId, config.routeKey);
     setActive(false);
     setStepIndex(0);
-    manuallyOpenedRef.current = false;
   }, [config, userId]);
 
   const openCurrentGuide = useCallback(() => {
     if (!available) return;
-    manuallyOpenedRef.current = true;
     setStepIndex(0);
     setActive(true);
   }, [available]);
@@ -330,7 +319,6 @@ export default function UserGuideProvider({ children }: { children: ReactNode })
     if (!config) return;
     clearGuideCompleted(userId, config.routeKey);
     if (!available) return;
-    manuallyOpenedRef.current = true;
     setStepIndex(0);
     setActive(true);
   }, [available, config, userId]);
@@ -338,15 +326,7 @@ export default function UserGuideProvider({ children }: { children: ReactNode })
   useEffect(() => {
     setActive(false);
     setStepIndex(0);
-    manuallyOpenedRef.current = false;
   }, [location.pathname]);
-
-  useEffect(() => {
-    if (!available || !config || manuallyOpenedRef.current) return;
-    if (hasCompletedGuide(userId, config.routeKey)) return;
-    const timer = window.setTimeout(() => setActive(true), 550);
-    return () => window.clearTimeout(timer);
-  }, [available, config, userId, location.pathname]);
 
   const contextValue = useMemo(() => ({
     openCurrentGuide,

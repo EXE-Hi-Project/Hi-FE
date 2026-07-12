@@ -34,6 +34,7 @@ export function isSafeUserMessage(message: unknown) {
 
 function withTrackingId(message: string, trackingId: unknown) {
   if (typeof trackingId !== 'string' || !trackingId.trim()) return message;
+  if (/mã hỗ trợ\s*:/i.test(message)) return message;
   return `${message} Mã hỗ trợ: ${trackingId}`;
 }
 

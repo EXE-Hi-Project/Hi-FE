@@ -695,7 +695,7 @@ export default function LandingPage() {
 
                   <h1 className="hi-page-title text-3xl md:text-4xl lg:text-5xl animate-fade-in-up delay-100">
                     Hiểu mình, Hiểu người,{' '}
-                    <span className="bg-gradient-to-r from-blue-500 to-pink-400 bg-clip-text text-transparent">
+                    <span className="text-pink-500">
                       Yêu thương trọn vẹn
                     </span>
                   </h1>
@@ -1008,6 +1008,7 @@ export default function LandingPage() {
                 <Link to="/terms" className="hover:text-pink-500">Điều khoản</Link>
                 <Link to="/privacy" className="hover:text-pink-500">Bảo mật</Link>
                 <Link to="/help" className="hover:text-pink-500">Trợ giúp</Link>
+                <Link to="/kien-thuc" className="hover:text-pink-500">Kiến thức</Link>
               </div>
             </div>
 

@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BellRinging,
+  Headset,
   CaretLeft,
   CaretRight,
   ChartPieSlice,
@@ -33,6 +34,7 @@ const AdminDailyQuestionsPanel = lazy(() => import('../components/admin/AdminDai
 const AffiliateAdminPanel = lazy(() => import('../components/admin/AffiliateAdminPanel'));
 const CouplePlacesAdminPanel = lazy(() => import('../components/admin/CouplePlacesAdminPanel'));
 const AdminNotificationsPanel = lazy(() => import('../components/admin/AdminNotificationsPanel'));
+const AdminSupportPanel = lazy(() => import('../components/admin/AdminSupportPanel'));
 const AdminSystemPanel = lazy(() => import('../components/admin/AdminSystemPanel'));
 
 const NAV_ITEMS = [
@@ -46,6 +48,7 @@ const NAV_ITEMS = [
   { id: 'affiliate', label: 'Affiliate', description: 'TikTok và Shopee', Icon: Storefront },
   { id: 'couplePlaces', label: 'Couple Map', description: 'Địa điểm & report', Icon: MapTrifold },
   { id: 'notifications', label: 'Thông báo', description: 'Chiến dịch vận hành', Icon: BellRinging },
+  { id: 'support', label: 'Hỗ trợ', description: 'Ticket người dùng', Icon: Headset },
   { id: 'system', label: 'Hệ thống', description: 'Health và cấu hình', Icon: Cpu },
 ] as const;
 
@@ -71,6 +74,8 @@ function ActivePanel({ tab }: { tab: AdminTab }) {
       return <CouplePlacesAdminPanel />;
     case 'notifications':
       return <AdminNotificationsPanel />;
+    case 'support':
+      return <AdminSupportPanel />;
     case 'system':
       return <AdminSystemPanel />;
     default:

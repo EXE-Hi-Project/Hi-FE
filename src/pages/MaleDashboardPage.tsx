@@ -16,6 +16,7 @@ import { useAuthStore } from '../store/authStore';
 import type { CycleInsights, CycleRecord, CoupleAnniversarySummary } from '../types/shared';
 import { normalizeAnniversarySummary } from '../utils/coupleAnniversaryCalendar';
 import WeatherForecast from '../components/ui/WeatherForecast';
+import { useSubscription } from '../hooks/useSubscription';
 
 const SaleBanner = lazy(() => import('../components/subscription/SaleBanner'));
 const PartnerCycleReportChart = lazy(() => import('../components/cycles/PartnerCycleReportChart'));
@@ -107,11 +108,14 @@ interface PartnerCyclesResponse {
 export default function MaleDashboardPage() {
   const { user } = useAuthStore();
   const [trustOpen, setTrustOpen] = useState(false);
+  const [failedPartnerAvatar, setFailedPartnerAvatar] = useState<string | null>(null);
+  const { data: subscription } = useSubscription();
   const greeting = getGreeting();
   const firstName = user?.name?.split(' ').pop() ?? 'bạn';
+  const subscriptionAccessKey = `${subscription?.tier ?? 'UNKNOWN'}:${subscription?.couplePremium === true}`;
 
   const partnerQuery = useQuery<PartnerCyclesResponse>({
-    queryKey: ['partner-cycles'],
+    queryKey: ['partner-cycles', subscriptionAccessKey],
     queryFn: async () => {
       const { data } = await api.get('/users/partner-cycles', { params: { historyPage: 0, historyLimit: 12 } });
       return data;
@@ -139,6 +143,8 @@ export default function MaleDashboardPage() {
   const ring = ringCopy(insights);
   const circumference = 2 * Math.PI * 44;
   const partnerName = partner?.name ?? 'Người ấy';
+  const partnerAvatar = partner?.avatar?.trim();
+  const partnerInitial = partnerName.trim().charAt(0).toUpperCase() || 'N';
   const fertilityLabel = insights?.fertilityStatus === 'HIGH' ? 'Cao' : insights?.fertilityStatus === 'LOW' ? 'Thấp' : 'Chưa đủ dữ liệu';
   const confidenceLabel = insights?.predictionConfidence === 'HIGH' ? 'Cao' : insights?.predictionConfidence === 'MEDIUM' ? 'Trung bình' : 'Đang học dữ liệu';
   const latestMoodValue = partnerQuery.data?.latestMood;
@@ -277,8 +283,17 @@ export default function MaleDashboardPage() {
                 </div>
                 {hasPartner ? (
                   <>
-                    <div className="mx-auto flex size-20 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-100 to-violet-100 shadow-sm">
-                      <span className="material-symbols-outlined text-4xl text-blue-400">person</span>
+                    <div className="mx-auto flex size-20 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-gradient-to-br from-blue-100 to-violet-100 text-2xl font-black text-blue-500 shadow-sm">
+                      {partnerAvatar && failedPartnerAvatar !== partnerAvatar ? (
+                        <img
+                          src={partnerAvatar}
+                          alt={`Ảnh đại diện của ${partnerName}`}
+                          className="h-full w-full object-cover"
+                          onError={() => setFailedPartnerAvatar(partnerAvatar)}
+                        />
+                      ) : (
+                        partnerInitial
+                      )}
                     </div>
                     <p className="mt-3 text-xl font-black text-slate-900">{partnerName}</p>
                     <p className="text-sm font-semibold text-slate-400">Đã kết nối</p>

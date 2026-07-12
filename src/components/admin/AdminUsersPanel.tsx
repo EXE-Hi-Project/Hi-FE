@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { BellRinging, CaretLeft, CaretRight, DownloadSimple, Crown, MagnifyingGlass, ShieldCheck, Trash, Users } from '@phosphor-icons/react';
+import { BellRinging, CaretLeft, CaretRight, DownloadSimple, Crown, MagnifyingGlass, ShieldCheck, Trash, Users, EnvelopeSimple } from '@phosphor-icons/react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -9,7 +9,7 @@ import { getUserFacingError } from '../../lib/userFacingError';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Modal from '../ui/Modal';
-import type { AdminUser } from './adminTypes';
+import type { AdminUser, OtpDelivery } from './adminTypes';
 import useAdminOverview from './useAdminOverview';
 
 const PAGE_SIZE = 10;
@@ -35,6 +35,7 @@ export default function AdminUsersPanel() {
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
   const [subscriptionTarget, setSubscriptionTarget] = useState<AdminUser | null>(null);
+  const [otpHistoryTarget, setOtpHistoryTarget] = useState<AdminUser | null>(null);
   const [subPlan, setSubPlan] = useState<'free' | 'premium'>('premium');
   const [subDurationDays, setSubDurationDays] = useState(30);
   const [subReason, setSubReason] = useState('');
@@ -127,6 +128,14 @@ export default function AdminUsersPanel() {
     },
     onError: (err: unknown) => {
       toast.error(getUserFacingError(err, 'Không thể cập nhật gói tài khoản'));
+    },
+  });
+  const otpHistoryQuery = useQuery({
+    queryKey: ['admin-user-otp-deliveries', otpHistoryTarget?._id],
+    enabled: Boolean(otpHistoryTarget),
+    queryFn: async () => {
+      const { data } = await api.get(`/admin/users/${otpHistoryTarget?._id}/otp-deliveries`);
+      return data.items as OtpDelivery[];
     },
   });
 
@@ -269,6 +278,7 @@ export default function AdminUsersPanel() {
                             {user.accountStatus ?? 'ACTIVE'}
                           </Badge>
                           <Badge tone={user.onboardingCompleted ? 'emerald' : 'slate'}>{user.onboardingCompleted ? 'Onboarded' : 'Pending'}</Badge>
+                          <OtpDeliveryBadge delivery={user.latestOtpDelivery} />
                           <Badge tone={isPremium ? 'violet' : 'slate'}>
                             {isPremium ? 'Premium 👑' : 'Free'}
                           </Badge>
@@ -311,6 +321,10 @@ export default function AdminUsersPanel() {
                       <BellRinging size={15} className="mr-1" />
                       Gửi TB
                     </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setOtpHistoryTarget(user)}>
+                      <EnvelopeSimple size={15} className="mr-1" />
+                      OTP
+                    </Button>
                     <Button size="sm" variant="danger" disabled={user.accountStatus === 'DELETED'} onClick={() => setPendingAction({ type: 'delete', user })}>
                       <Trash size={15} className="mr-1" />
                       Xóa
@@ -337,6 +351,26 @@ export default function AdminUsersPanel() {
           </div>
         </div>
       </section>
+
+      <Modal
+        open={otpHistoryTarget !== null}
+        onClose={() => setOtpHistoryTarget(null)}
+        title="Lịch sử gửi OTP"
+        footer={<div className="flex justify-end"><Button variant="ghost" onClick={() => setOtpHistoryTarget(null)}>Đóng</Button></div>}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">Người dùng: <span className="font-bold text-slate-900">{otpHistoryTarget?.email}</span></p>
+          {otpHistoryQuery.isLoading ? <div className="h-24 animate-pulse rounded-xl bg-slate-100" /> :
+            (otpHistoryQuery.data?.length ?? 0) === 0 ? <p className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-sm text-slate-400">Chưa có dữ liệu Resend.</p> :
+              <div className="space-y-2">{otpHistoryQuery.data?.map((delivery) => (
+                <div key={delivery.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm">
+                  <div className="flex items-center justify-between gap-2"><span className="font-bold text-slate-800">{delivery.purpose === 'ACTIVATION' ? 'Kích hoạt tài khoản' : 'Đặt lại mật khẩu'}</span><OtpDeliveryBadge delivery={delivery} /></div>
+                  <p className="mt-1 text-xs text-slate-500">Gửi: {formatDate(delivery.attemptedAt)} · Cập nhật: {formatDate(delivery.statusUpdatedAt)}</p>
+                  {delivery.reason && <p className="mt-1 text-xs text-amber-700">{delivery.reason}</p>}
+                </div>
+              ))}</div>}
+        </div>
+      </Modal>
 
       <Modal
         open={pendingAction !== null}
@@ -512,3 +546,12 @@ function Badge({ children, tone = 'slate' }: { children: ReactNode; tone?: 'slat
   };
   return <span className={`rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase ${classes[tone]}`}>{children}</span>;
 }
+
+function OtpDeliveryBadge({ delivery }: { delivery?: OtpDelivery }) {
+  if (!delivery) return <Badge>OTP: Chưa có dữ liệu</Badge>;
+  const labels: Record<OtpDelivery['status'], string> = { PENDING: 'OTP: Đang gửi', SENT: 'OTP: Đã gửi', DELIVERED: 'OTP: Đã giao', BOUNCED: 'OTP: Bị trả lại', COMPLAINED: 'OTP: Bị khiếu nại', DELAYED: 'OTP: Đang chậm', FAILED: 'OTP: Lỗi gửi' };
+  const tone = delivery.status === 'DELIVERED' ? 'emerald' : ['BOUNCED', 'COMPLAINED', 'FAILED'].includes(delivery.status) ? 'rose' : ['DELAYED', 'PENDING'].includes(delivery.status) ? 'amber' : 'violet';
+  return <Badge tone={tone}>{labels[delivery.status]}</Badge>;
+}
+
+function formatDate(value: string) { return new Date(value).toLocaleString('vi-VN'); }

@@ -8,6 +8,8 @@ import api from '../lib/api';
 import { Notification } from '../types';
 
 const notificationMeta: Record<string, { icon: string; label: string; tone: string; bg: string }> = {
+  SUPPORT_REPLY: { icon: 'support_agent', label: 'Hỗ trợ', tone: 'text-rose-700', bg: 'bg-rose-50' },
+  SUPPORT_CLOSED: { icon: 'task_alt', label: 'Hỗ trợ', tone: 'text-emerald-700', bg: 'bg-emerald-50' },
   PARTNER_CONNECT: { icon: 'favorite', label: 'Kết nối', tone: 'text-pink-500', bg: 'bg-pink-50' },
   PARTNER_DISCONNECT: { icon: 'heart_broken', label: 'Hủy kết nối', tone: 'text-rose-500', bg: 'bg-rose-50' },
   PARTNER_MOOD_UPDATE: { icon: 'sentiment_satisfied', label: 'Cảm xúc từ Người ấy', tone: 'text-amber-500', bg: 'bg-amber-50' },

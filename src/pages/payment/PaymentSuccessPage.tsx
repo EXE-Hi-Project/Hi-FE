@@ -1,7 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 
 export default function PaymentSuccessPage() {
+  const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
+  const dashboardPath = user?.gender === 'male' ? '/male-dashboard' : '/female-dashboard';
+
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ['subscription'] });
+    void queryClient.invalidateQueries({ queryKey: ['partner-cycles'] });
+    void queryClient.invalidateQueries({ queryKey: ['partner-question-today'] });
+  }, [queryClient]);
+
   return (
     <div className="flex min-h-[80vh] items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-100/30 px-4 py-12">
       <div className="w-full max-w-md rounded-3xl border border-pink-100 bg-white p-8 text-center shadow-xl shadow-pink-100/50 backdrop-blur-sm">
@@ -17,7 +29,7 @@ export default function PaymentSuccessPage() {
 
         <div className="mt-8 space-y-3">
           <Link
-            to="/female-dashboard"
+            to={dashboardPath}
             className="hi-btn-primary flex w-full items-center justify-center rounded-2xl px-6 py-3.5 text-base font-semibold"
           >
             Về Dashboard của tôi

@@ -89,6 +89,8 @@ function handleSubscriptionEvent(queryClient: QueryClient, event: RealtimeEvent<
   } else {
     queryClient.invalidateQueries({ queryKey: ['subscription'] });
   }
+  queryClient.invalidateQueries({ queryKey: ['partner-cycles'] });
+  queryClient.invalidateQueries({ queryKey: ['partner-question-today'] });
   if (event.type.startsWith('payment.')) {
     queryClient.invalidateQueries({ queryKey: ['paymentHistory'] });
   }
