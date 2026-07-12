@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MapTrifold } from '@phosphor-icons/react';
+import { Headset, MapTrifold } from '@phosphor-icons/react';
 import { useAuthStore } from '../../store/authStore';
 import { useSubscription } from '../../hooks/useSubscription';
 import api from '../../lib/api';
@@ -33,15 +33,11 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
   });
   const unreadCount = unreadData?.unreadCount ?? 0;
 
-  useQuery({
+  const { data: profileUser } = useQuery({
     queryKey: ['profile-connection-poll', user?._id],
     queryFn: async () => {
       const { data } = await api.get('/users/profile');
-      const nextUser = data?.user ?? data?.data?.user;
-      if (nextUser && nextUser.partnerId !== user?.partnerId) {
-        setUser(nextUser);
-      }
-      return nextUser;
+      return data?.user ?? data?.data?.user;
     },
     enabled: loggedIn && !isAdmin,
     refetchInterval: 120_000,
@@ -79,10 +75,12 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
         { to: '/products', icon: 'shopping_bag', label: 'Sản phẩm chăm sóc' },
         { to: notificationSettingsPath, icon: 'notifications_active', label: 'Cài đặt thông báo' },
         { to: '/settings', icon: 'manage_accounts', label: 'Hồ sơ cá nhân' },
+        { to: '/help', icon: 'headset', label: 'Trợ giúp & hỗ trợ' },
         { to: user?.gender === 'female' ? '/cycles' : '/calendar', icon: 'calendar_month', label: user?.gender === 'female' ? 'Chu kỳ của tôi' : 'Lịch của bạn' },
       ].filter((item) => user?.gender === 'female' || item.to !== '/calendar');
 
   const [dropOpen, setDropOpen] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -99,7 +97,19 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
     setDropOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (profileUser && (profileUser.partnerId !== user?.partnerId || profileUser.avatar !== user?.avatar)) {
+      setUser(profileUser);
+    }
+  }, [profileUser, setUser, user?.avatar, user?.partnerId]);
+
   const isCoupleMap = location.pathname === '/couple-map';
+  const userAvatar = user?.avatar?.trim();
+  const userInitial = user?.name?.trim().charAt(0).toUpperCase() || 'H';
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [userAvatar]);
 
   return (
     <div className={`${isCoupleMap ? 'absolute' : 'sticky'} top-4 z-50 flex w-full justify-center px-4`}>
@@ -171,8 +181,17 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
                   onClick={() => setDropOpen((v) => !v)}
                   className="flex items-center gap-2 rounded-full border border-gray-100 bg-white py-1 pl-1 pr-3 transition-all hover:shadow-sm"
                 >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-pink-300 to-purple-300">
-                    <span className="material-symbols-outlined text-[16px] text-white">person</span>
+                  <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-pink-300 to-purple-300 text-xs font-black text-white">
+                    {userAvatar && !avatarFailed ? (
+                      <img
+                        src={userAvatar}
+                        alt={user?.name ?? 'Avatar'}
+                        className="h-full w-full object-cover"
+                        onError={() => setAvatarFailed(true)}
+                      />
+                    ) : (
+                      userInitial
+                    )}
                   </div>
                   <span className="hidden text-sm font-bold text-slate-900 sm:block">{user?.name?.split(' ').pop()}</span>
                   <span className={`material-symbols-outlined text-lg text-slate-400 transition-transform duration-200 ${dropOpen ? 'rotate-90' : ''}`}>
@@ -198,6 +217,8 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
                       >
                         {icon === 'map' ? (
                           <MapTrifold size={18} weight="bold" className="text-slate-400" />
+                        ) : icon === 'headset' ? (
+                          <Headset size={18} weight="bold" className="text-slate-400" />
                         ) : (
                           <span className="material-symbols-outlined text-[18px] text-slate-400">{icon}</span>
                         )}

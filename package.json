@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:client && npm run build:prerender",
+    "build:client": "tsc && vite build",
+    "build:prerender": "vite build --ssr src/seo/prerender-entry.tsx --outDir dist-ssr && node scripts/prerender.mjs",
+    "test:seo": "node scripts/verify-seo.mjs",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },

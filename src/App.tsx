@@ -7,6 +7,7 @@ import { getUserFacingError } from './lib/userFacingError';
 import { getOrCreateSessionId, trackEvent } from './utils/analytics';
 import UserGuideProvider from './components/onboarding/UserGuideProvider';
 import MaintenanceGate from './components/maintenance/MaintenanceGate';
+import SeoHead from './seo/SeoHead';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -33,7 +34,11 @@ const Layout = lazy(() => import('./components/layout/Layout'));
 const FloatingHiChat = lazy(() => import('./components/chat/FloatingHiChat'));
 const PaymentSuccessPage = lazy(() => import('./pages/payment/PaymentSuccessPage'));
 const PaymentCancelPage = lazy(() => import('./pages/payment/PaymentCancelPage'));
-const HelpPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.HelpPage })));
+const HelpPage = lazy(() => import('./pages/SupportPage'));
+const KnowledgeHubPage = lazy(() => import('./pages/KnowledgePages').then((m) => ({ default: m.KnowledgeHubPage })));
+const KnowledgeArticlePage = lazy(() => import('./pages/KnowledgePages').then((m) => ({ default: m.KnowledgeArticlePage })));
+const EditorialProcessPage = lazy(() => import('./pages/KnowledgePages').then((m) => ({ default: m.EditorialProcessPage })));
+const NotFoundPage = lazy(() => import('./pages/KnowledgePages').then((m) => ({ default: m.NotFoundPage })));
 const PrivacyPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.TermsPage })));
 
@@ -197,6 +202,7 @@ export default function App() {
   return (
     <MaintenanceGate>
       <UserGuideProvider>
+        <SeoHead />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
       <Route path="/" element={<HomeRoute />} />
@@ -207,6 +213,9 @@ export default function App() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/help" element={<HelpPage />} />
+      <Route path="/kien-thuc" element={<KnowledgeHubPage />} />
+      <Route path="/kien-thuc/quy-trinh-bien-tap" element={<EditorialProcessPage />} />
+      <Route path="/kien-thuc/:slug" element={<KnowledgeArticlePage />} />
       <Route path="/connect" element={<PartnerInvitePage />} />
       <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
       {/* Female dashboard — standalone (no sidebar Layout) */}
@@ -235,6 +244,8 @@ export default function App() {
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       </Route>
+      <Route path="/404" element={<NotFoundPage />} />
+      <Route path="*" element={<NotFoundPage />} />
         </Routes>
         </Suspense>
         <FloatingHiChatGate />

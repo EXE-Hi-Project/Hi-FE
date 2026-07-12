@@ -37,6 +37,7 @@ const productLinks = [
 ];
 
 const resourceLinks = [
+  ['Kiến thức', '/kien-thuc'],
   ['Điều khoản', '/terms'],
   ['Bảo mật', '/privacy'],
   ['Trợ giúp', '/help'],

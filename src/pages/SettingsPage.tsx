@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { Card } from '../components/ui/Card';
@@ -24,6 +25,15 @@ interface ProfileResponse {
   data?: { user?: User };
 }
 
+interface PresignAvatarResponse {
+  data?: {
+    uploadUrl: string;
+    objectKey: string;
+    publicUrl: string;
+    contentType: string;
+  };
+}
+
 function unwrapUser(response: ProfileResponse): User {
   const user = response.user ?? response.data?.user;
   if (!user) throw new Error('Phản hồi người dùng không hợp lệ');
@@ -36,6 +46,10 @@ function normalizeNumber(value: number | '') {
 
 export default function SettingsPage() {
   const { user, setUser } = useAuthStore();
+  const queryClient = useQueryClient();
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const { data: subscription } = useSubscription();
   const { data: transactions } = usePaymentHistory();
   const isPremium = subscription?.tier === 'PREMIUM';
@@ -49,7 +63,6 @@ export default function SettingsPage() {
     isMale
       ? {
           label: 'Hồ sơ nam',
-          heroIcon: 'person',
           eyebrow: 'Không gian cá nhân',
           gradient: 'from-blue-500 to-indigo-500',
           softGradient: 'from-blue-50 to-indigo-50',
@@ -60,7 +73,6 @@ export default function SettingsPage() {
         }
       : {
           label: 'Hồ sơ nữ',
-          heroIcon: 'person',
           eyebrow: 'Không gian cá nhân',
           gradient: 'from-rose-500 to-pink-500',
           softGradient: 'from-pink-50 to-violet-50',
@@ -100,155 +112,210 @@ export default function SettingsPage() {
     },
   });
 
+  const avatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!file.type || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        throw new Error('Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP');
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('Avatar phải nhỏ hơn 5MB');
+      }
+
+      const { data: presignData } = await api.post<PresignAvatarResponse>('/users/avatar/presign', {
+        fileName: file.name,
+        contentType: file.type,
+        contentLength: file.size,
+      });
+      const presigned = presignData.data;
+      if (!presigned?.uploadUrl || !presigned.objectKey) {
+        throw new Error('Không lấy được URL tải ảnh');
+      }
+
+      await axios.put(presigned.uploadUrl, file, {
+        headers: { 'Content-Type': presigned.contentType || file.type },
+        withCredentials: false,
+        timeout: 30_000,
+      });
+
+      const { data } = await api.post<ProfileResponse>('/users/avatar/confirm', {
+        objectKey: presigned.objectKey,
+      });
+      return unwrapUser(data);
+    },
+    onSuccess: async (updatedUser) => {
+      await queryClient.cancelQueries({ queryKey: ['profile-connection-poll', updatedUser._id] });
+      queryClient.setQueryData(['profile-connection-poll', updatedUser._id], updatedUser);
+      setUser(updatedUser);
+      toast.success('Đã cập nhật avatar!');
+    },
+    onError: (error: unknown) => {
+      toast.error(getUserFacingError(error, 'Tải avatar thất bại'));
+    },
+    onSettled: () => {
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+        setAvatarPreview(null);
+      }
+    },
+  });
+
+  const handleAvatarChange = (file?: File) => {
+    if (!file) return;
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview(URL.createObjectURL(file));
+    avatarMutation.mutate(file);
+  };
+
+  const avatarUrl = avatarPreview ?? user?.avatar;
+  const avatarInitial = user?.name?.trim().charAt(0).toUpperCase() ?? 'H';
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-sm backdrop-blur md:p-8">
-        <div className={`pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-gradient-to-br ${accent.softGradient} blur-3xl`} />
-        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-violet-100/45 blur-3xl" />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-500">
-              <span className={`material-symbols-outlined text-[20px] ${accent.text}`}>manage_accounts</span>
-              <span>{accent.eyebrow}</span>
-            </div>
-            <h1 className="hi-page-title text-3xl md:text-4xl">
-              Cài đặt hồ sơ cá nhân
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-500 md:text-base">
-              Cập nhật thông tin cơ bản để Hi cá nhân hóa dashboard, dự đoán sức khỏe và các gợi ý hằng ngày chính xác hơn.
-            </p>
+      <section className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-sm backdrop-blur md:p-8">
+        <div className={`pointer-events-none absolute -left-24 -top-28 h-72 w-72 rounded-full bg-gradient-to-br ${accent.softGradient} opacity-80 blur-3xl`} />
+        <div className="relative mb-7 max-w-2xl">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-500">
+            <span className={`material-symbols-outlined text-[20px] ${accent.text}`}>manage_accounts</span>
+            <span>{accent.eyebrow}</span>
           </div>
-          <div className={`flex items-center gap-3 rounded-2xl border ${accent.border} bg-white/80 px-4 py-3 shadow-sm`}>
-            <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${accent.gradient} text-white`}>
-              <span className="material-symbols-outlined text-[20px]">{accent.heroIcon}</span>
-            </div>
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">{accent.label}</p>
-              <p className="text-sm font-extrabold text-slate-800">{user?.name ?? 'Người dùng Hi'}</p>
-            </div>
-          </div>
+          <h1 className="hi-page-title text-3xl md:text-4xl">Hồ sơ của bạn</h1>
+          <p className="mt-2 text-sm leading-relaxed text-slate-500 md:text-base">
+            Cập nhật thông tin để Hi cá nhân hóa trải nghiệm chăm sóc sức khỏe mỗi ngày.
+          </p>
         </div>
-      </section>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <Card className={`h-fit overflow-hidden border-white/80 bg-gradient-to-br ${accent.softGradient} shadow-sm`}>
-          <div className="flex flex-col items-center text-center">
-            <div className={`mb-4 flex h-24 w-24 items-center justify-center rounded-[28px] bg-gradient-to-br ${accent.gradient} text-4xl font-black text-white shadow-lg ${accent.shadow}`}>
-              {user?.name?.charAt(0).toUpperCase() ?? 'H'}
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-900">{user?.name ?? 'Người dùng Hi'}</h2>
-            <p className="mt-1 max-w-full truncate text-sm text-slate-500">{user?.email}</p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <span className={`rounded-full bg-white px-3 py-1 text-xs font-bold ${accent.text} shadow-sm`}>
-                {user?.gender === 'female' ? 'Nữ' : user?.gender === 'male' ? 'Nam' : 'Khác'}
-              </span>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-600 shadow-sm">
-                {user?.onboardingCompleted ? 'Đã onboarding' : 'Chưa onboarding'}
-              </span>
-            </div>
-
-            {/* Subscription details block */}
-            <div className="mt-6 w-full border-t border-slate-200/50 pt-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2.5">Gói đồng hành</p>
-              {isPremium ? (
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 to-pink-500/10 border border-amber-200/40 p-4 text-left shadow-sm">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20">
-                      <span className="material-symbols-outlined text-[20px] animate-pulse">workspace_premium</span>
-                    </div>
-                    <div>
-                      <p className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">Gói Hi đang hoạt động</p>
-                      <p className="text-[11px] font-bold text-pink-600 mt-0.5">{planLabel}</p>
-                    </div>
-                  </div>
-                  {subscription?.currentPeriodEnd && (
-                    <p className="text-[10px] text-slate-400 mt-3.5 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px] text-slate-400">calendar_today</span>
-                      Hạn dùng: {new Date(subscription.currentPeriodEnd).toLocaleDateString('vi-VN')}
-                    </p>
+        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-start">
+          <div className={`rounded-[1.75rem] border ${accent.border} bg-gradient-to-br ${accent.softGradient} p-5 md:p-7`}>
+            <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
+              <div className="relative shrink-0">
+                <div className={`flex h-36 w-36 items-center justify-center overflow-hidden rounded-[2rem] border-4 border-white bg-gradient-to-br ${accent.gradient} text-5xl font-black text-white shadow-xl ${accent.shadow} md:h-40 md:w-40`}>
+                  {avatarUrl && failedAvatarUrl !== avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={`Ảnh đại diện của ${user?.name ?? 'người dùng Hi'}`}
+                      className="h-full w-full object-cover"
+                      onError={() => setFailedAvatarUrl(avatarUrl)}
+                    />
+                  ) : (
+                    avatarInitial
                   )}
                 </div>
-              ) : (
-                <div className="rounded-2xl bg-white/70 border border-slate-100 p-4 text-left shadow-sm">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-                      <span className="material-symbols-outlined text-[20px]">face</span>
-                    </div>
-                    <div>
-                      <p className="text-xs font-extrabold text-slate-700 uppercase tracking-wide">Cơ Bản</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Trải nghiệm cơ bản</p>
-                    </div>
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarMutation.isPending}
+                  aria-label="Đổi ảnh đại diện"
+                  className={`absolute -bottom-2 -right-2 grid h-11 w-11 place-items-center rounded-2xl border-4 border-white bg-gradient-to-br ${accent.gradient} text-white shadow-lg transition hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-white/80 disabled:cursor-wait disabled:opacity-70`}
+                >
+                  <span className={`material-symbols-outlined text-[20px] ${avatarMutation.isPending ? 'animate-spin' : ''}`}>
+                    {avatarMutation.isPending ? 'progress_activity' : 'photo_camera'}
+                  </span>
+                </button>
+              </div>
+
+              <div className="min-w-0 flex-1 pt-1">
+                <p className={`text-xs font-extrabold ${accent.text}`}>{accent.label}</p>
+                <h2 className="mt-1 break-words text-2xl font-black tracking-tight text-slate-950 md:text-3xl">
+                  {user?.name ?? 'Người dùng Hi'}
+                </h2>
+                <p className="mt-1 break-all text-sm font-medium text-slate-500">{user?.email}</p>
+                <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+                  <span className={`rounded-full border ${accent.border} bg-white/85 px-3 py-1 text-xs font-bold ${accent.text}`}>
+                    {user?.gender === 'female' ? 'Nữ' : user?.gender === 'male' ? 'Nam' : 'Khác'}
+                  </span>
+                  <span className="rounded-full border border-emerald-100 bg-white/85 px-3 py-1 text-xs font-bold text-emerald-600">
+                    {user?.onboardingCompleted ? 'Đã hoàn tất hồ sơ' : 'Chưa hoàn tất hồ sơ'}
+                  </span>
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(event) => handleAvatarChange(event.target.files?.[0])}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  loading={avatarMutation.isPending}
+                  className="mt-5"
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  <span className="material-symbols-outlined mr-1.5 text-[16px]">photo_camera</span>
+                  Đổi ảnh đại diện
+                </Button>
+                <p className="mt-2 text-xs font-medium leading-relaxed text-slate-400">JPG, PNG hoặc WebP, tối đa 5MB.</p>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-white/80 pt-5">
+              <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/75 p-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${isPremium ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className="material-symbols-outlined text-[20px]">{isPremium ? 'workspace_premium' : 'favorite'}</span>
                   </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-500">Gói đồng hành</p>
+                    <p className="truncate text-sm font-black text-slate-900">{planLabel}</p>
+                  </div>
+                </div>
+                {!isPremium && (
                   <a
                     href="#btn-checkout-monthly"
-                    onClick={(e) => {
-                      e.preventDefault();
+                    onClick={(event) => {
+                      event.preventDefault();
                       document.getElementById('btn-checkout-monthly')?.scrollIntoView({ behavior: 'smooth' });
                     }}
-                    className="hi-btn-primary mt-3.5 block text-center rounded-xl py-2 px-4 text-xs font-bold"
+                    className={`shrink-0 text-xs font-extrabold ${accent.text} hover:underline`}
                   >
-                    Nâng cấp Hi Pro
+                    Nâng cấp
                   </a>
-                </div>
+                )}
+              </div>
+              {isPremium && subscription?.currentPeriodEnd && (
+                <p className="mt-2 text-xs font-medium text-slate-400">
+                  Hạn dùng: {new Date(subscription.currentPeriodEnd).toLocaleDateString('vi-VN')}
+                </p>
               )}
             </div>
           </div>
-        </Card>
 
-        <div className="space-y-6">
-          <Card className="border-white/80 bg-white/90 shadow-sm backdrop-blur">
+          <div className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm md:p-6">
             <div className="mb-6">
-              <h3 className="text-lg font-extrabold text-slate-900">Thông tin cá nhân</h3>
+              <h3 className="text-xl font-extrabold text-slate-900">Thông tin cá nhân</h3>
               <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                Trang này chỉ dùng để chỉnh hồ sơ. Cài đặt thông báo và cặp đôi nằm ở trang riêng.
+                Những thông tin này giúp dự đoán sức khỏe phù hợp hơn với cơ thể bạn.
               </p>
             </div>
             <form onSubmit={handleSubmit((data) => mutate(data))} className="space-y-4">
-              <Input
-                label="Họ và tên"
-                className={accent.focus}
-                {...register('name', { required: true })}
-              />
-              <Input
-                label="Ngày sinh"
-                type="date"
-                className={accent.focus}
-                {...register('birthDate')}
-              />
+              <Input label="Họ và tên" className={accent.focus} {...register('name', { required: true })} />
+              <Input label="Ngày sinh" type="date" className={accent.focus} {...register('birthDate')} />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Chiều cao (cm)"
-                  type="number"
-                  className={accent.focus}
-                  {...register('height', { valueAsNumber: true })}
-                />
-                <Input
-                  label="Cân nặng (kg)"
-                  type="number"
-                  className={accent.focus}
-                  {...register('weight', { valueAsNumber: true })}
-                />
+                <Input label="Chiều cao (cm)" type="number" className={accent.focus} {...register('height', { valueAsNumber: true })} />
+                <Input label="Cân nặng (kg)" type="number" className={accent.focus} {...register('weight', { valueAsNumber: true })} />
               </div>
-
               <div className={`rounded-2xl border ${accent.border} bg-gradient-to-br ${accent.softGradient} p-4`}>
                 <div className="flex items-start gap-3">
                   <span className={`material-symbols-outlined mt-0.5 ${accent.text}`}>privacy_tip</span>
-                  <div>
-                    <p className="text-sm font-extrabold text-slate-800">Dữ liệu hồ sơ được dùng để cá nhân hóa</p>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                      Chiều cao, cân nặng và ngày sinh giúp Hi đưa ra dự đoán phù hợp hơn với cơ thể của bạn.
-                    </p>
-                  </div>
+                  <p className="text-xs font-semibold leading-relaxed text-slate-600">
+                    Dữ liệu hồ sơ chỉ được dùng để cá nhân hóa trải nghiệm và dự đoán sức khỏe của bạn.
+                  </p>
                 </div>
               </div>
-
               <Button type="submit" loading={isPending}>
                 <span className="material-symbols-outlined mr-2 text-[18px]">save</span>
                 Lưu thay đổi
               </Button>
             </form>
-          </Card>
+          </div>
+        </div>
+      </section>
 
+      <div className="space-y-6">
           {/* Lịch sử giao dịch */}
           <Card className="border-white/80 bg-white/90 shadow-sm backdrop-blur p-6">
             <div className="mb-6">
@@ -368,7 +435,6 @@ export default function SettingsPage() {
             </div>
           </Card>
         </div>
-      </div>
 
       <div className="mt-8 border-t border-slate-100 pt-8">
         <PricingCard />

@@ -60,6 +60,8 @@ export function useSubscription() {
     queryKey: ['subscription', userId],
     queryFn: () => api.get('/payments/subscription').then((r) => r.data.data),
     enabled: !!userId,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -84,6 +86,8 @@ export function useCheckout() {
       if (data.activated) {
         toast.success('Da kich hoat goi Hi thanh cong');
         queryClient.invalidateQueries({ queryKey: ['subscription'] });
+        queryClient.invalidateQueries({ queryKey: ['partner-cycles'] });
+        queryClient.invalidateQueries({ queryKey: ['partner-question-today'] });
         queryClient.invalidateQueries({ queryKey: ['paymentHistory'] });
         queryClient.invalidateQueries({ queryKey: ['plan-pricing'] });
         return;

@@ -61,6 +61,16 @@ export interface AdminUser {
     status?: string | null;
     currentPeriodEnd?: string | null;
   };
+  latestOtpDelivery?: OtpDelivery;
+}
+
+export interface OtpDelivery {
+  id: string;
+  purpose: 'ACTIVATION' | 'PASSWORD_RESET';
+  status: 'PENDING' | 'SENT' | 'DELIVERED' | 'BOUNCED' | 'COMPLAINED' | 'DELAYED' | 'FAILED';
+  reason?: string | null;
+  attemptedAt: string;
+  statusUpdatedAt: string;
 }
 
 export interface PayOSTransaction {
@@ -109,4 +119,5 @@ export type AdminTab =
   | 'affiliate'
   | 'couplePlaces'
   | 'notifications'
+  | 'support'
   | 'system';

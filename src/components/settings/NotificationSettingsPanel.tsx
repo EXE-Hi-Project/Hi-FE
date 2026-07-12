@@ -403,6 +403,10 @@ export default function NotificationSettingsPanel({ variant }: { variant: Varian
 
   const ownName = user?.name || 'Bạn';
   const partnerName = partnerQuery.data?.partner?.name || 'Người ấy';
+  const ownAvatar = user?.avatar?.trim();
+  const partnerAvatar = partnerQuery.data?.partner?.avatar?.trim();
+  const ownInitial = ownName.trim().charAt(0).toUpperCase() || 'B';
+  const partnerInitial = partnerName.trim().charAt(0).toUpperCase() || 'N';
 
   // Define settings card sub-elements to avoid duplicate code and support clean separate layouts
   const privacyCard = !isMale ? (
@@ -638,12 +642,20 @@ export default function NotificationSettingsPanel({ variant }: { variant: Varian
               <div className="flex items-center justify-center">
                 <div>
                 <div className="relative flex items-center gap-4">
-                  <div className="grid h-28 w-28 place-items-center rounded-full bg-gradient-to-br from-blue-200 to-violet-300 text-white shadow-xl ring-4 ring-white">
-                    <span className="material-symbols-outlined text-5xl">person</span>
+                  <div className="grid h-28 w-28 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-blue-200 to-violet-300 text-3xl font-black text-white shadow-xl ring-4 ring-white">
+                    {ownAvatar ? (
+                      <img src={ownAvatar} alt={ownName} className="h-full w-full object-cover" />
+                    ) : (
+                      ownInitial
+                    )}
                   </div>
                   <div className="h-1 w-16 rounded-full bg-gradient-to-r from-blue-200 to-pink-200" />
-                  <div className="grid h-28 w-28 place-items-center rounded-full bg-gradient-to-br from-pink-200 to-violet-300 text-white shadow-xl ring-4 ring-white">
-                    <span className="material-symbols-outlined text-5xl">person</span>
+                  <div className="grid h-28 w-28 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-pink-200 to-violet-300 text-3xl font-black text-white shadow-xl ring-4 ring-white">
+                    {partnerAvatar ? (
+                      <img src={partnerAvatar} alt={partnerName} className="h-full w-full object-cover" />
+                    ) : (
+                      partnerInitial
+                    )}
                   </div>
                   <div className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white bg-white text-pink-500 shadow-lg">
                     <span className="material-symbols-outlined">favorite</span>

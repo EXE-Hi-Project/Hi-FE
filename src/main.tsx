@@ -18,7 +18,13 @@ const queryClient = new QueryClient({
   },
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root')!;
+if (rootElement.dataset.prerendered === 'true') {
+  rootElement.replaceChildren();
+  delete rootElement.dataset.prerendered;
+}
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>

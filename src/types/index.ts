@@ -134,7 +134,9 @@ export interface Notification {
     | 'COUPLE_QUESTION_UNLOCKED'
     | 'CONTEXTUAL_CARE_SUGGESTION'
     | 'ADMIN_CAMPAIGN'
-    | 'ADMIN_MESSAGE';
+    | 'ADMIN_MESSAGE'
+    | 'SUPPORT_REPLY'
+    | 'SUPPORT_CLOSED';
   title: string;
   message: string;
   actionUrl?: string;
