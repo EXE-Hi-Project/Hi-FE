@@ -82,6 +82,7 @@ export default function FemaleDashboardPage() {
   const { user } = useAuthStore();
   const hasPartner = !!user?.partnerId;
   const [trustOpen, setTrustOpen] = useState(false);
+  const [failedPartnerAvatar, setFailedPartnerAvatar] = useState<string | null>(null);
 
   const firstName = user?.name?.split(' ').pop() ?? 'bạn';
   const greeting  = getGreeting();
@@ -122,6 +123,7 @@ export default function FemaleDashboardPage() {
   });
   const anniversaries = anniversariesQuery.data;
   const partnerName = partnerQuery.data?.partner?.name ?? 'Bạn đời';
+  const partnerAvatar = partnerQuery.data?.partner?.avatar?.trim();
   const latestPartnerMood = partnerQuery.data?.latestMood ?? null;
   const partnerMoodLabel = latestPartnerMood?.label
     ?? (typeof latestPartnerMood?.moodScore === 'number'
@@ -391,8 +393,19 @@ export default function FemaleDashboardPage() {
                 {hasPartner ? (
                   <div className="flex flex-col items-center text-center mb-5">
                     <div className="relative mb-3">
-                      <div className="size-20 rounded-full border-4 border-white shadow-md bg-gradient-to-br from-blue-200 to-purple-200 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-4xl text-white">person</span>
+                      <div className="size-20 overflow-hidden rounded-full border-4 border-white bg-gradient-to-br from-blue-200 to-purple-200 shadow-md flex items-center justify-center">
+                        {partnerAvatar && failedPartnerAvatar !== partnerAvatar ? (
+                          <img
+                            src={partnerAvatar}
+                            alt={`Avatar cua ${partnerName}`}
+                            className="h-full w-full object-cover"
+                            onError={() => setFailedPartnerAvatar(partnerAvatar)}
+                          />
+                        ) : (
+                          <span className="text-2xl font-black text-white" aria-hidden="true">
+                            {partnerName.trim().charAt(0).toUpperCase() || 'H'}
+                          </span>
+                        )}
                       </div>
                       <div className="absolute bottom-0 right-0 bg-white p-1 rounded-full shadow-sm">
                         <span className="material-symbols-outlined text-pink-500 text-sm">notifications_active</span>
