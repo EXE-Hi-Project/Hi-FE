@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
   BookmarkSimple,
+  Buildings,
   CaretDown,
   Check,
   ClockCounterClockwise,
@@ -16,6 +17,7 @@ import {
   MagnifyingGlass,
   MapPin,
   NavigationArrow,
+  PaintBrush,
   Crosshair,
   Plus,
   Star,
@@ -57,8 +59,38 @@ const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const RECENT_SEARCHES_KEY = 'hi.coupleMap.recentSearches.v1';
 
 const CATEGORIES = [
-  { id: 'ALL', label: 'Tất cả', Icon: Compass },
-  ...PLACE_CATEGORY_ORDER.filter((id) => id !== 'OTHER').map((id) => ({ id, ...PLACE_CATEGORY_META[id] })),
+  { id: 'ALL', filterCategory: 'ALL', label: 'Tất cả', Icon: Compass, activeClass: 'bg-slate-700 text-white shadow-sm' },
+  ...PLACE_CATEGORY_ORDER.filter((id) => id !== 'OTHER').map((id) => ({
+    id,
+    filterCategory: id,
+    ...PLACE_CATEGORY_META[id],
+  })),
+  {
+    id: 'MALL',
+    filterCategory: 'SHOPPING',
+    ...PLACE_CATEGORY_META.SHOPPING,
+    label: 'TTTM',
+    Icon: Buildings,
+  },
+  {
+    id: 'MUSEUM',
+    filterCategory: 'ENTERTAINMENT',
+    ...PLACE_CATEGORY_META.ENTERTAINMENT,
+    label: 'Bảo tàng',
+    Icon: Buildings,
+  },
+  {
+    id: 'WORKSHOP',
+    filterCategory: 'ENTERTAINMENT',
+    ...PLACE_CATEGORY_META.ENTERTAINMENT,
+    label: 'Workshop',
+    Icon: PaintBrush,
+  },
+  {
+    id: 'OTHER',
+    filterCategory: 'OTHER',
+    ...PLACE_CATEGORY_META.OTHER,
+  },
 ] as const;
 
 const FORM_CATEGORIES = PLACE_CATEGORY_ORDER.map((id) => ({ id, ...PLACE_CATEGORY_META[id] }));
@@ -73,11 +105,6 @@ const SORTS: Array<{ id: SortMode; label: string }> = [
 const CATEGORY_LABEL = Object.fromEntries(
   PLACE_CATEGORY_ORDER.map((id) => [id, PLACE_CATEGORY_META[id].label]),
 ) as Record<CouplePlaceCategory, string>;
-
-const CATEGORY_COLORS = {
-  ALL: 'bg-slate-700 text-white shadow-sm',
-  ...Object.fromEntries(PLACE_CATEGORY_ORDER.map((id) => [id, PLACE_CATEGORY_META[id].activeClass])),
-} as Record<CouplePlaceCategory | 'ALL', string>;
 
 const CATEGORY_MARKER = PLACE_CATEGORY_META;
 
@@ -963,6 +990,7 @@ export default function CoupleMapPage() {
   const [cameraCommand, setCameraCommand] = useState<CameraCommand | null>(null);
   const [userPosition, setUserPosition] = useState<LatLng | null>(null);
   const [category, setCategory] = useState<CouplePlaceCategory | 'ALL'>('ALL');
+  const [activeCategoryId, setActiveCategoryId] = useState<(typeof CATEGORIES)[number]['id']>('ALL');
   const [sort, setSort] = useState<SortMode>('recommended');
   const [sortOpen, setSortOpen] = useState(false);
   const [viewMode, setViewMode] = useState<MapViewMode>('nearby');
@@ -1356,18 +1384,25 @@ export default function CoupleMapPage() {
               {places.length} địa điểm
             </span>
           </div>
-          <div className="grid grid-cols-4 gap-1.5">
-            {CATEGORIES.map(({ id, label, Icon }) => (
+          <div
+            className="flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-1 touch-pan-x"
+            aria-label="Danh mục địa điểm hẹn hò"
+          >
+            {CATEGORIES.map(({ id, filterCategory, label, Icon, activeClass }) => (
               <button
                 key={id}
                 type="button"
-                onClick={() => setCategory(id)}
+                onClick={() => {
+                  setActiveCategoryId(id);
+                  setCategory(filterCategory);
+                }}
                 title={label}
-                className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight transition-colors ${
-                  category === id ? CATEGORY_COLORS[id] : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-500'
+                aria-pressed={activeCategoryId === id}
+                className={`flex min-h-14 w-[68px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight transition-colors active:scale-[0.98] ${
+                  activeCategoryId === id ? activeClass : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-500'
                 }`}
               >
-                <Icon size={15} weight={category === id ? 'fill' : 'bold'} />
+                <Icon size={15} weight={activeCategoryId === id ? 'fill' : 'bold'} />
                 <span className="line-clamp-2 text-center">{label}</span>
               </button>
             ))}

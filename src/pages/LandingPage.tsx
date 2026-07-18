@@ -23,7 +23,7 @@ const HERO_AVATARS = [
 ];
 
 const HERO_IMAGE_PRIORITY = { fetchpriority: 'high' } as Record<string, string>;
-const BRAND_GRADIENT_TEXT = 'bg-gradient-to-r from-sky-400 via-violet-400 to-pink-400 bg-clip-text text-transparent';
+const BRAND_GRADIENT_TEXT = 'hi-brand-gradient-text';
 const FEATURE_TRANSITION = { type: 'spring' as const, stiffness: 260, damping: 30 };
 const FEATURE_AUTO_ADVANCE_MS = 5000;
 

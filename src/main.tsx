@@ -6,8 +6,14 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import RealtimeSocketBridge from './components/realtime/RealtimeSocketBridge';
+import { isMetaInAppBrowser } from './lib/browserEnvironment';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './index.css';
+
+document.documentElement.classList.toggle(
+  'meta-in-app-browser',
+  isMetaInAppBrowser(window.navigator.userAgent),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {

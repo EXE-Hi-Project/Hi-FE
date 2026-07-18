@@ -188,9 +188,10 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 lg:p-6 relative overflow-hidden"
+      className="auth-shell min-h-screen flex items-center justify-center p-4 lg:p-6 relative overflow-hidden"
       style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", background: '#f5f0fc' }}
     >
+      <div className="auth-ambient-effect contents" aria-hidden="true">
       {/* ===== Animated blobs — blue + pink mix ===== */}
       <div className="absolute pointer-events-none" style={{ width: 560, height: 560, borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', background: 'radial-gradient(circle at 40% 40%, #c9e8f8 0%, #b8d4f5 50%, transparent 80%)', top: '-160px', left: '-140px', animation: 'morphBlob1 12s ease-in-out infinite', opacity: 0.75, filter: 'blur(55px)' }} />
       <div className="absolute pointer-events-none" style={{ width: 500, height: 500, borderRadius: '40% 60% 30% 70% / 60% 40% 70% 30%', background: 'radial-gradient(circle at 60% 60%, #f9c2db 0%, #f4a8cb 55%, transparent 80%)', bottom: '-160px', right: '-120px', animation: 'morphBlob2 14s ease-in-out infinite 2s', opacity: 0.70, filter: 'blur(55px)' }} />
@@ -203,9 +204,11 @@ export default function LoginPage() {
       <div className="absolute pointer-events-none rounded-full" style={{ width: 12, height: 12, background: 'linear-gradient(135deg,#f9a8c9,#eb477e)', top: '70%', right: '7%', animation: 'driftOrb2 22s ease-in-out infinite 3s', opacity: 0.50, filter: 'blur(1px)' }} />
       <div className="absolute pointer-events-none rounded-full" style={{ width: 22, height: 22, background: 'linear-gradient(135deg,#a8dff0,#f9c2d4)', bottom: '25%', left: '5%', animation: 'driftOrb3 15s ease-in-out infinite 6s', opacity: 0.45, filter: 'blur(2px)' }} />
 
+      </div>
+
       {/* ===== Card ===== */}
       <div
-        className="relative w-full flex overflow-hidden"
+        className="auth-glass-panel relative w-full flex overflow-hidden"
         style={{ borderRadius: 28, boxShadow: '0 24px 70px rgba(180,130,220,0.18), 0 6px 28px rgba(168,200,240,0.18)', background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)', maxWidth: 920 }}
       >
 
