@@ -193,7 +193,9 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
                       userInitial
                     )}
                   </div>
-                  <span className="hidden text-sm font-bold text-slate-900 sm:block">{user?.name?.split(' ').pop()}</span>
+                  <span className="hidden whitespace-nowrap text-sm font-bold text-slate-900 sm:block">
+                    {user?.name?.trim() || 'Người dùng Hi'}
+                  </span>
                   <span className={`material-symbols-outlined text-lg text-slate-400 transition-transform duration-200 ${dropOpen ? 'rotate-90' : ''}`}>
                     chevron_right
                   </span>
