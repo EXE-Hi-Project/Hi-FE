@@ -13,6 +13,23 @@
   }
 }
 
+html.meta-in-app-browser .auth-shell {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(184, 212, 245, 0.72), transparent 42%),
+    radial-gradient(circle at 88% 88%, rgba(244, 168, 203, 0.62), transparent 44%),
+    #f5f0fc !important;
+}
+
+html.meta-in-app-browser .auth-ambient-effect {
+  display: none !important;
+}
+
+html.meta-in-app-browser .auth-glass-panel {
+  background: #ffffff !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 @layer components {
   .hi-btn-primary {
     @apply inline-flex items-center justify-center font-bold text-white transition-all duration-200 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pink-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:translate-y-0 disabled:shadow-none;

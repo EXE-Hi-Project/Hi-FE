@@ -397,7 +397,7 @@ export default function FemaleDashboardPage() {
                         {partnerAvatar && failedPartnerAvatar !== partnerAvatar ? (
                           <img
                             src={partnerAvatar}
-                            alt={`Avatar cua ${partnerName}`}
+                            alt={`Ảnh đại diện của ${partnerName}`}
                             className="h-full w-full object-cover"
                             onError={() => setFailedPartnerAvatar(partnerAvatar)}
                           />

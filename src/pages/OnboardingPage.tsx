@@ -174,13 +174,16 @@ export default function OnboardingPage() {
 
   return (
     <div
-      className="min-h-screen relative overflow-x-hidden"
+      className="auth-shell min-h-screen relative overflow-x-hidden"
       style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", background: '#f5f0fc' }}
     >
+      <div className="auth-ambient-effect contents" aria-hidden="true">
       {/* ─── Background blobs ───────────────────────────────── */}
       <div className="absolute pointer-events-none" style={{ width: 520, height: 520, borderRadius: '60% 40% 70% 30% / 50% 60% 40% 50%', background: 'radial-gradient(circle at 40% 40%, #c9e8f8 0%, #b8d4f5 50%, transparent 80%)', top: '-150px', left: '-120px', animation: 'morphBlob1 12s ease-in-out infinite', opacity: 0.65, filter: 'blur(55px)' }} />
       <div className="absolute pointer-events-none" style={{ width: 480, height: 480, borderRadius: '40% 60% 30% 70% / 60% 40% 70% 30%', background: 'radial-gradient(circle at 60% 60%, #f9c2db 0%, #f4a8cb 55%, transparent 80%)', bottom: '-150px', right: '-100px', animation: 'morphBlob2 14s ease-in-out infinite 2s', opacity: 0.60, filter: 'blur(55px)' }} />
       <div className="absolute pointer-events-none" style={{ width: 340, height: 340, borderRadius: '50% 50% 40% 60% / 40% 60% 50% 50%', background: 'radial-gradient(circle at 50% 50%, #ddb8f0 0%, #c8a8e8 60%, transparent 80%)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', animation: 'morphBlob3 16s ease-in-out infinite 1s', opacity: 0.40, filter: 'blur(50px)' }} />
+
+      </div>
 
       {/* ─── Top bar ─────────────────────────────────────────── */}
       <div className="relative z-20 flex items-center justify-between px-6 sm:px-10 py-5 flex-shrink-0">
