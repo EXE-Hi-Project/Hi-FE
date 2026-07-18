@@ -191,7 +191,7 @@ export default function PricingCard() {
               )}
 
               <div>
-                <p className={`hi-brand-gradient-text text-lg font-black ${isCurrentPlan ? 'mt-6' : ''}`}>{plan.label}</p>
+                <p className={`text-lg font-black text-slate-900 ${isCurrentPlan ? 'mt-6' : ''}`}>{plan.label}</p>
                 {plan.basePrice ? (
                   <div className="mt-3 flex items-center gap-2">
                     <p className="text-sm font-bold text-slate-400 line-through">{plan.basePrice}</p>
