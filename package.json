@@ -12,6 +12,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.14.27",
     "@hookform/resolvers": "^3.3.2",
     "@iconify-icons/fluent-emoji-flat": "^1.2.9",
     "@iconify/react": "^6.0.2",
@@ -33,7 +34,7 @@
     "react-router-dom": "^6.30.4",
     "recharts": "^3.8.0",
     "zod": "^3.22.4",
-    "zustand": "^4.4.7"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

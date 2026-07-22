@@ -191,7 +191,7 @@ export default function PricingCard() {
               )}
 
               <div>
-                <p className={`text-lg font-black text-slate-900 ${isCurrentPlan ? 'mt-6' : ''}`}>{plan.label}</p>
+                <p className={`hi-brand-gradient-text text-lg font-black ${isCurrentPlan ? 'mt-6' : ''}`}>{plan.label}</p>
                 {plan.basePrice ? (
                   <div className="mt-3 flex items-center gap-2">
                     <p className="text-sm font-bold text-slate-400 line-through">{plan.basePrice}</p>
@@ -199,7 +199,7 @@ export default function PricingCard() {
                   </div>
                 ) : null}
                 <div className="mt-4 flex items-baseline text-slate-900">
-                  <span className={`text-4xl font-black tracking-tight ${!isFreePlan && plan.basePrice ? 'bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-transparent' : ''}`}>{plan.price}</span>
+                  <span className="hi-brand-gradient-text text-4xl font-black tracking-tight">{plan.price}</span>
                   <span className="ml-1 text-lg font-bold text-slate-400">{plan.period}</span>
                 </div>
                 <p className="mt-3 min-h-10 text-sm font-semibold leading-relaxed text-slate-500">{plan.description}</p>

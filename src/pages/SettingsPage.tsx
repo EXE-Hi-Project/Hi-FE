@@ -12,6 +12,7 @@ import { User } from '../types';
 import PricingCard from '../components/PricingCard';
 import { useSubscription, usePaymentHistory } from '../hooks/useSubscription';
 import { getUserFacingError } from '../lib/userFacingError';
+import { Camera, CircleNotch } from '@phosphor-icons/react';
 
 interface ProfileForm {
   name: string;
@@ -210,9 +211,9 @@ export default function SettingsPage() {
                   aria-label="Đổi ảnh đại diện"
                   className={`absolute -bottom-2 -right-2 grid h-11 w-11 place-items-center rounded-2xl border-4 border-white bg-gradient-to-br ${accent.gradient} text-white shadow-lg transition hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-white/80 disabled:cursor-wait disabled:opacity-70`}
                 >
-                  <span className={`material-symbols-outlined text-[20px] ${avatarMutation.isPending ? 'animate-spin' : ''}`}>
-                    {avatarMutation.isPending ? 'progress_activity' : 'photo_camera'}
-                  </span>
+                  {avatarMutation.isPending
+                    ? <CircleNotch size={20} className="animate-spin" aria-hidden="true" />
+                    : <Camera size={20} weight="bold" aria-hidden="true" />}
                 </button>
               </div>
 
@@ -245,7 +246,7 @@ export default function SettingsPage() {
                   className="mt-5"
                   onClick={() => avatarInputRef.current?.click()}
                 >
-                  <span className="material-symbols-outlined mr-1.5 text-[16px]">photo_camera</span>
+                  <Camera size={16} weight="bold" className="mr-1.5" aria-hidden="true" />
                   Đổi ảnh đại diện
                 </Button>
                 <p className="mt-2 text-xs font-medium leading-relaxed text-slate-400">JPG, PNG hoặc WebP, tối đa 5MB.</p>
