@@ -360,6 +360,22 @@ export type CouplePlaceCategory =
 export type CouplePlaceStatus = 'PUBLISHED' | 'HIDDEN' | 'ARCHIVED';
 export type CouplePlaceSource = 'USER' | 'OSM' | 'GOOGLE' | 'HYBRID';
 export type CouplePlaceVisibility = 'PUBLIC' | 'COUPLE_PRIVATE';
+export type CouplePlaceSearchSource = 'HI' | 'VIETMAP' | 'TOMTOM' | 'PHOTON';
+
+export interface CouplePlaceSearchSuggestion {
+  id: string;
+  name: string;
+  address: string;
+  displayName: string;
+  lat?: number;
+  lng?: number;
+  type?: string;
+  source: CouplePlaceSearchSource;
+  visibility?: CouplePlaceVisibility;
+  distanceMeters?: number;
+  refId?: string;
+  requiresResolve: boolean;
+}
 
 export interface CouplePlaceLocation {
   lat: number;

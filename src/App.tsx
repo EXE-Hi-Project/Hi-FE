@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { MotionConfig } from 'motion/react';
 import { useAuthStore } from './store/authStore';
 import { consumeGoogleOAuthRedirect } from './lib/googleAuth';
 import { getUserFacingError } from './lib/userFacingError';
@@ -200,6 +201,7 @@ export default function App() {
   }, [location.hash, socialLogin, navigate]);
 
   return (
+    <MotionConfig reducedMotion="user" transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}>
     <MaintenanceGate>
       <UserGuideProvider>
         <SeoHead />
@@ -251,5 +253,6 @@ export default function App() {
         <FloatingHiChatGate />
       </UserGuideProvider>
     </MaintenanceGate>
+    </MotionConfig>
   );
 }

@@ -3,10 +3,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import maplibregl, { Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   BookmarkSimple,
   Buildings,
   CaretDown,
+  CaretLeft,
+  CaretRight,
   Check,
   ClockCounterClockwise,
   Compass,
@@ -31,7 +34,8 @@ import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
 import { useAuthStore } from '../store/authStore';
 import { PLACE_CATEGORY_META, PLACE_CATEGORY_ORDER } from '../components/couple-map/placeCategoryMeta';
-import type { CouplePlace, CouplePlaceCategory, CouplePlaceReview, CouplePlaceVisibility, CreateCouplePlaceDto } from '../types/shared';
+import type { CouplePlace, CouplePlaceCategory, CouplePlaceReview, CouplePlaceSearchSuggestion, CouplePlaceVisibility, CreateCouplePlaceDto } from '../types/shared';
+import { motionTransition } from '../lib/motion';
 
 type LatLng = { lat: number; lng: number };
 type MapBounds = { north: number; south: number; east: number; west: number };
@@ -42,18 +46,8 @@ type MapViewMode = 'nearby' | 'saved';
 type LocationStatus = 'locating' | 'ready' | 'denied' | 'unsupported' | 'error';
 type IdentityMode = 'real' | 'anonymous' | 'nickname';
 type DetailPanel = 'review' | 'report' | null;
-type SearchSuggestion = {
-  id: string;
-  name: string;
-  address: string;
-  displayName: string;
-  lat: number;
-  lng: number;
-  type?: string;
-  source?: 'HI' | 'TOMTOM' | 'PHOTON';
-  visibility?: CouplePlaceVisibility;
-  distanceMeters?: number;
-};
+type SearchSuggestion = CouplePlaceSearchSuggestion;
+type ResolvedSearchSuggestion = SearchSuggestion & { lat: number; lng: number; requiresResolve: false };
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const RECENT_SEARCHES_KEY = 'hi.coupleMap.recentSearches.v1';
@@ -107,6 +101,82 @@ const CATEGORY_LABEL = Object.fromEntries(
 ) as Record<CouplePlaceCategory, string>;
 
 const CATEGORY_MARKER = PLACE_CATEGORY_META;
+type CategoryId = (typeof CATEGORIES)[number]['id'];
+
+function CategoryRail({
+  activeCategoryId,
+  onSelect,
+}: {
+  activeCategoryId: CategoryId;
+  onSelect: (id: CategoryId, category: CouplePlaceCategory | 'ALL') => void;
+}) {
+  const railRef = useRef<HTMLDivElement>(null);
+  const [scrollState, setScrollState] = useState({ left: false, right: false });
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const update = () => setScrollState({
+      left: rail.scrollLeft > 4,
+      right: rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4,
+    });
+    update();
+    rail.addEventListener('scroll', update, { passive: true });
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+    observer?.observe(rail);
+    return () => {
+      rail.removeEventListener('scroll', update);
+      observer?.disconnect();
+    };
+  }, []);
+
+  const scrollByPage = (direction: -1 | 1) => {
+    const rail = railRef.current;
+    if (!rail) return;
+    rail.scrollBy({ left: direction * rail.clientWidth * 0.75, behavior: reduceMotion ? 'auto' : 'smooth' });
+  };
+
+  return (
+    <div className="flex items-center gap-1" aria-label="Danh mục địa điểm hẹn hò">
+      <button
+        type="button"
+        aria-label="Danh mục trước"
+        disabled={!scrollState.left}
+        onClick={() => scrollByPage(-1)}
+        className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-slate-600 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30 lg:size-9"
+      >
+        <CaretLeft size={17} weight="bold" />
+      </button>
+      <div ref={railRef} className="flex min-w-0 flex-1 snap-x snap-mandatory gap-1.5 overflow-x-auto pb-1 touch-pan-x">
+        {CATEGORIES.map(({ id, filterCategory, label, Icon, activeClass }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onSelect(id, filterCategory)}
+            title={label}
+            aria-pressed={activeCategoryId === id}
+            className={`flex min-h-11 w-[72px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight transition-colors active:scale-[0.98] lg:min-h-14 lg:w-[68px] ${
+              activeCategoryId === id ? activeClass : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-500'
+            }`}
+          >
+            <Icon size={15} weight={activeCategoryId === id ? 'fill' : 'bold'} />
+            <span className="line-clamp-2 text-center">{label}</span>
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        aria-label="Danh mục sau"
+        disabled={!scrollState.right}
+        onClick={() => scrollByPage(1)}
+        className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-slate-600 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30 lg:size-9"
+      >
+        <CaretRight size={17} weight="bold" />
+      </button>
+    </div>
+  );
+}
 
 function formatDistance(value?: number) {
   if (value == null) return 'Gần bạn';
@@ -189,6 +259,7 @@ function LocationPermissionOverlay({
   onRetry: () => void;
 }) {
   const locating = status === 'locating';
+  const reduceMotion = useReducedMotion();
   const title = locating
     ? 'Đang lấy vị trí của bạn'
     : status === 'unsupported'
@@ -206,12 +277,24 @@ function LocationPermissionOverlay({
 
   return (
     <div className="absolute inset-0 z-30 flex h-[100dvh] w-full items-center justify-center bg-[linear-gradient(135deg,#f8fbff_0%,#fff1f6_100%)] p-4">
-      <div className="w-full max-w-sm rounded-3xl border border-white/85 bg-white/88 p-5 text-center shadow-2xl shadow-slate-900/10 backdrop-blur-xl">
-        <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-rose-50 text-rose-500">
-          {locating ? <Spinner size="md" /> : <NavigationArrow size={25} weight="fill" />}
+      <div className="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-lg shadow-slate-900/10">
+        <div className="relative mx-auto grid size-16 place-items-center">
+          {locating && !reduceMotion ? (
+            <>
+              <motion.span className="absolute inset-1 rounded-full border border-rose-300" animate={{ scale: [0.72, 1.15], opacity: [0.75, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }} />
+              <motion.span className="absolute inset-1 rounded-full border border-rose-200" animate={{ scale: [0.72, 1.15], opacity: [0.6, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut', delay: 0.45 }} />
+            </>
+          ) : null}
+          <div className="relative z-10 grid size-12 place-items-center rounded-xl bg-rose-50 text-rose-500">
+            {locating ? <Crosshair size={24} weight="bold" /> : <NavigationArrow size={25} weight="fill" />}
+          </div>
         </div>
-        <h2 className="mt-4 text-lg font-black text-slate-950">{title}</h2>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">{description}</p>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={status} initial={reduceMotion ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? undefined : { opacity: 0, y: -4 }} transition={motionTransition.state}>
+            <h2 className="mt-3 text-lg font-black text-slate-950">{title}</h2>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">{description}</p>
+          </motion.div>
+        </AnimatePresence>
         {!locating ? (
           <Button type="button" className="mt-5 w-full" onClick={onRetry}>
             <Crosshair size={17} weight="bold" />
@@ -270,16 +353,18 @@ function useDebouncedValue(value: string, delayMs: number) {
   return debounced;
 }
 
-function loadRecentSearches(): SearchSuggestion[] {
+function loadRecentSearches(): ResolvedSearchSuggestion[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) ?? '[]');
-    return Array.isArray(parsed) ? parsed.filter((item) => item?.id && isValidLatLng(item)).slice(0, 5) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((item) => item?.id && isValidLatLng(item)).map((item) => ({ ...item, requiresResolve: false })).slice(0, 5)
+      : [];
   } catch {
     return [];
   }
 }
 
-function saveRecentSearches(items: SearchSuggestion[]) {
+function saveRecentSearches(items: ResolvedSearchSuggestion[]) {
   try {
     localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(items.slice(0, 5)));
   } catch {
@@ -302,7 +387,7 @@ function FreeMapCanvas({
   initialCenter: LatLng;
   cameraCommand: CameraCommand | null;
   userPosition?: LatLng | null;
-  searchPin?: SearchSuggestion | null;
+  searchPin?: ResolvedSearchSuggestion | null;
   searchPinCategory?: CouplePlaceCategory;
   places: CouplePlace[];
   selected?: CouplePlace | null;
@@ -996,13 +1081,14 @@ export default function CoupleMapPage() {
   const [viewMode, setViewMode] = useState<MapViewMode>('nearby');
   const [selected, setSelected] = useState<CouplePlace | null>(null);
   const [pendingPosition, setPendingPosition] = useState<LatLng | null>(null);
-  const [pendingSuggestion, setPendingSuggestion] = useState<SearchSuggestion | null>(null);
+  const [pendingSuggestion, setPendingSuggestion] = useState<ResolvedSearchSuggestion | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('locating');
   const [searchValue, setSearchValue] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
-  const [selectedSuggestion, setSelectedSuggestion] = useState<SearchSuggestion | null>(null);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<ResolvedSearchSuggestion | null>(null);
+  const [resolvingSuggestionId, setResolvingSuggestionId] = useState<string | null>(null);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
-  const [recentSearches, setRecentSearches] = useState<SearchSuggestion[]>(loadRecentSearches);
+  const [recentSearches, setRecentSearches] = useState<ResolvedSearchSuggestion[]>(loadRecentSearches);
   const lastSavedFitRef = useRef('');
   const debouncedSearch = useDebouncedValue(searchValue.trim(), 250);
 
@@ -1189,23 +1275,48 @@ export default function CoupleMapPage() {
     setSelected(null);
   };
 
-  const selectSuggestion = (suggestion: SearchSuggestion) => {
-    const nextCenter = { lat: suggestion.lat, lng: suggestion.lng };
+  const resolveSuggestion = async (suggestion: SearchSuggestion): Promise<ResolvedSearchSuggestion | null> => {
+    if (!suggestion.requiresResolve && isValidLatLng({ lat: suggestion.lat ?? Number.NaN, lng: suggestion.lng ?? Number.NaN })) {
+      return { ...suggestion, lat: suggestion.lat as number, lng: suggestion.lng as number, requiresResolve: false };
+    }
+    if (!suggestion.refId || suggestion.source !== 'VIETMAP') {
+      toast.error('Gợi ý này chưa có tọa độ hợp lệ');
+      return null;
+    }
+    setResolvingSuggestionId(suggestion.id);
+    try {
+      const response = await api.get('/couple-places/search/resolve', { params: { refId: suggestion.refId } });
+      const resolved = response.data.suggestion as SearchSuggestion;
+      if (!isValidLatLng({ lat: resolved.lat ?? Number.NaN, lng: resolved.lng ?? Number.NaN })) throw new Error('Invalid resolved coordinates');
+      return { ...resolved, lat: resolved.lat as number, lng: resolved.lng as number, requiresResolve: false };
+    } catch (error) {
+      toast.error(getUserFacingError(error, 'Không lấy được tọa độ địa chỉ này'));
+      return null;
+    } finally {
+      setResolvingSuggestionId(null);
+    }
+  };
+
+  const selectSuggestion = async (suggestion: SearchSuggestion) => {
+    if (resolvingSuggestionId) return;
+    const resolved = await resolveSuggestion(suggestion);
+    if (!resolved) return;
+    const nextCenter = { lat: resolved.lat, lng: resolved.lng };
     setCameraCommand((current) => ({ center: nextCenter, zoom: 16, nonce: (current?.nonce ?? 0) + 1 }));
     setSelected(null);
-    setSelectedSuggestion(suggestion);
-    setSearchValue(suggestion.name || suggestion.displayName);
+    setSelectedSuggestion(resolved);
+    setSearchValue(resolved.name || resolved.displayName);
     setSearchFocused(false);
     setActiveSuggestionIndex(0);
     setRecentSearches((current) => {
-      const next = [suggestion, ...current.filter((item) => item.id !== suggestion.id)].slice(0, 5);
+      const next = [resolved, ...current.filter((item) => item.id !== resolved.id)].slice(0, 5);
       saveRecentSearches(next);
       return next;
     });
   };
 
   const openAddPlace = () => {
-    const sourceSuggestion = selectedSuggestion ?? (searchValue.trim() && suggestions[0] ? suggestions[0] : null);
+    const sourceSuggestion = selectedSuggestion;
     if (sourceSuggestion) {
       setPendingSuggestion(sourceSuggestion);
       setPendingPosition({ lat: sourceSuggestion.lat, lng: sourceSuggestion.lng });
@@ -1220,7 +1331,7 @@ export default function CoupleMapPage() {
   };
 
   const openExternalPlaceModal = (place: CouplePlace) => {
-    const suggestion: SearchSuggestion = {
+    const suggestion: ResolvedSearchSuggestion = {
       id: place.googlePlaceId ?? placeKey(place),
       name: place.name,
       address: place.location.address ?? '',
@@ -1229,6 +1340,7 @@ export default function CoupleMapPage() {
       lng: place.location.lng,
       type: place.category,
       source: place.source === 'OSM' ? 'PHOTON' : 'HI',
+      requiresResolve: false,
     };
     setPendingSuggestion(suggestion);
     setPendingPosition(place.location);
@@ -1335,14 +1447,15 @@ export default function CoupleMapPage() {
                 ) : visibleSuggestions.length > 0 ? (
                   visibleSuggestions.map((suggestion, index) => (
                     <button
-                      key={`${suggestion.id}-${suggestion.lat}-${suggestion.lng}`}
+                      key={suggestion.id}
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => selectSuggestion(suggestion)}
+                      disabled={resolvingSuggestionId !== null}
                       className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${index === activeSuggestionIndex ? 'bg-rose-50' : 'hover:bg-slate-50'}`}
                     >
                       <div className="flex items-start gap-2.5">
-                        {searchValue.trim() ? <MapPin size={18} weight="fill" className="mt-0.5 shrink-0 text-rose-400" /> : <ClockCounterClockwise size={18} weight="bold" className="mt-0.5 shrink-0 text-slate-400" />}
+                        {resolvingSuggestionId === suggestion.id ? <Spinner size="sm" /> : searchValue.trim() ? <MapPin size={18} weight="fill" className="mt-0.5 shrink-0 text-rose-400" /> : <ClockCounterClockwise size={18} weight="bold" className="mt-0.5 shrink-0 text-slate-400" />}
                         <div className="min-w-0">
                           <p className="line-clamp-1 text-sm font-black text-slate-900">{suggestion.name || suggestion.displayName}</p>
                           <p className="mt-1 line-clamp-1 text-xs font-bold text-slate-400">
@@ -1359,7 +1472,7 @@ export default function CoupleMapPage() {
             ) : null}
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={locateMe} disabled={locationStatus === 'locating'}>
+            <Button variant="outline" size="sm" onClick={locateMe} loading={locationStatus === 'locating'}>
               <NavigationArrow size={16} weight="fill" />
               {locationStatus === 'locating' ? 'Đang định vị' : 'Vị trí của tôi'}
             </Button>
@@ -1370,6 +1483,15 @@ export default function CoupleMapPage() {
           </div>
           <div className="lg:hidden">
             <MapViewToggle value={viewMode} onChange={changeViewMode} />
+            <div className="mt-2">
+              <CategoryRail
+                activeCategoryId={activeCategoryId}
+                onSelect={(id, nextCategory) => {
+                  setActiveCategoryId(id);
+                  setCategory(nextCategory);
+                }}
+              />
+            </div>
           </div>
         </div>
       </div> : null}
@@ -1384,29 +1506,13 @@ export default function CoupleMapPage() {
               {places.length} địa điểm
             </span>
           </div>
-          <div
-            className="flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-1 touch-pan-x"
-            aria-label="Danh mục địa điểm hẹn hò"
-          >
-            {CATEGORIES.map(({ id, filterCategory, label, Icon, activeClass }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  setActiveCategoryId(id);
-                  setCategory(filterCategory);
-                }}
-                title={label}
-                aria-pressed={activeCategoryId === id}
-                className={`flex min-h-14 w-[68px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight transition-colors active:scale-[0.98] ${
-                  activeCategoryId === id ? activeClass : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-500'
-                }`}
-              >
-                <Icon size={15} weight={activeCategoryId === id ? 'fill' : 'bold'} />
-                <span className="line-clamp-2 text-center">{label}</span>
-              </button>
-            ))}
-          </div>
+          <CategoryRail
+            activeCategoryId={activeCategoryId}
+            onSelect={(id, nextCategory) => {
+              setActiveCategoryId(id);
+              setCategory(nextCategory);
+            }}
+          />
           <div className="relative mt-2">
             <button type="button" onClick={() => setSortOpen((open) => !open)} className="flex h-10 w-full items-center justify-between rounded-xl border border-white/80 bg-white/75 px-3 text-xs font-black text-slate-800 shadow-sm backdrop-blur-xl">
               <span className="text-[10px] uppercase tracking-[0.12em] text-slate-400">Sắp xếp</span>

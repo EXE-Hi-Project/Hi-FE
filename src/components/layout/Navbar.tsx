@@ -106,6 +106,8 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
   const isCoupleMap = location.pathname === '/couple-map';
   const userAvatar = user?.avatar?.trim();
   const userInitial = user?.name?.trim().charAt(0).toUpperCase() || 'H';
+  const displayName = user?.name?.trim() || 'Người dùng Hi';
+  const compactDashboardNav = displayName.length > 24;
 
   useEffect(() => {
     setAvatarFailed(false);
@@ -113,7 +115,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
 
   return (
     <div className={`${isCoupleMap ? 'absolute' : 'sticky'} top-4 z-50 flex w-full justify-center px-4`}>
-      <header className="lp-floating-nav flex w-full max-w-[1100px] items-center justify-between whitespace-nowrap rounded-full px-6 py-3">
+      <header className="lp-floating-nav flex w-fit min-w-[min(1100px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] items-center justify-between whitespace-nowrap rounded-full px-4 py-3 sm:px-6">
         <Link to={loggedIn ? homePath : '/'} className="flex flex-shrink-0 items-center gap-3">
           <HiLogo size={34} />
           <span
@@ -130,7 +132,7 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
         </Link>
 
         {loggedIn ? (
-          <nav data-guide="main-nav" className="mx-3 hidden flex-1 items-center justify-center gap-1 md:flex">
+          <nav data-guide="main-nav" className={compactDashboardNav ? 'hidden' : 'mx-3 hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex'}>
             {dashboardLinks.map(({ to, label, icon }) => {
               const active = location.pathname === to;
               return (
@@ -193,8 +195,8 @@ export default function Navbar({ showAnchors = false }: NavbarProps) {
                       userInitial
                     )}
                   </div>
-                  <span className="hidden whitespace-nowrap text-sm font-bold text-slate-900 sm:block">
-                    {user?.name?.trim() || 'Người dùng Hi'}
+                  <span className="hidden whitespace-nowrap text-sm font-bold text-slate-900 lg:block">
+                    {displayName}
                   </span>
                   <span className={`material-symbols-outlined text-lg text-slate-400 transition-transform duration-200 ${dropOpen ? 'rotate-90' : ''}`}>
                     chevron_right
