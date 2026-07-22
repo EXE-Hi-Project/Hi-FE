@@ -64,6 +64,21 @@ export interface AdminUser {
   latestOtpDelivery?: OtpDelivery;
 }
 
+export interface AdminSubscriptionStats {
+  free: number;
+  hiPro: number;
+  hiMax: number;
+  activePaidTotal: number;
+}
+
+export interface AdminCoupleStats {
+  eligibleUsers: number;
+  pairedUsers: number;
+  pairedCouples: number;
+  unpairedUsers: number;
+  pairingRatePct: number;
+}
+
 export interface OtpDelivery {
   id: string;
   purpose: 'ACTIVATION' | 'PASSWORD_RESET';
@@ -106,6 +121,8 @@ export interface AdminOverviewResponse {
   recentUsers: AdminUser[];
   payosReport: PayOSReport;
   affiliateReport?: AffiliateReport;
+  subscriptionStats?: AdminSubscriptionStats;
+  coupleStats?: AdminCoupleStats;
 }
 
 export type AdminTab =

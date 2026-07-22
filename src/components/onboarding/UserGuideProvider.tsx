@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useLocation } from 'react-router-dom';
 import { getUserGuideConfig, GuidePlacement, UserGuideConfig } from '../../config/userGuide';

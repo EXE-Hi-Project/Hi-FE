@@ -2,7 +2,31 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import type { DailyLog, FlowIntensity, SymptomCategory, SymptomDictionary, UpsertDailyLogDto, CycleRecord } from '../../types/shared';
+import type { ComponentType } from 'react';
+import type { IconProps } from '@phosphor-icons/react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bandaids,
+  Brain,
+  CheckCircle,
+  ClockCounterClockwise,
+  Drop,
+  FirstAid,
+  ForkKnife,
+  Heartbeat,
+  MagnifyingGlass,
+  MagnifyingGlassMinus,
+  MoonStars,
+  NotePencil,
+  ShieldWarning,
+  Smiley,
+  Sparkle,
+  BowlFood,
+  Thermometer,
+  WarningCircle,
+} from '@phosphor-icons/react';
+import type { DailyLog, FlowIntensity, SymptomDictionary, SymptomSeverity, UpsertDailyLogDto, CycleRecord } from '../../types/shared';
 import api from '../../lib/api';
 import { getUserFacingError } from '../../lib/userFacingError';
 import ResponsiveModal from '../ui/ResponsiveModal';
@@ -18,45 +42,68 @@ interface DailyLogModalProps {
 }
 
 interface SymptomGroup {
-  category: SymptomCategory;
+  kind: 'BODY' | 'DIGESTIVE' | 'EMOTIONAL' | 'FLUID' | 'ATTENTION';
   title: string;
   description: string;
-  icon: string;
+  Icon: ComponentType<IconProps>;
   accentClassName: string;
-  singleSelect?: boolean;
 }
 
-const FLOW_OPTIONS: Array<{ value: FlowIntensity; label: string; icon: string }> = [
-  { value: 'NONE', label: 'Không có', icon: 'water_drop' },
-  { value: 'LIGHT', label: 'Ít', icon: 'water_drop' },
-  { value: 'MEDIUM', label: 'Vừa', icon: 'water_drop' },
-  { value: 'HEAVY', label: 'Nhiều', icon: 'water_drop' },
+const FLOW_OPTIONS: Array<{ value: FlowIntensity; label: string }> = [
+  { value: 'NONE', label: 'Không có' },
+  { value: 'LIGHT', label: 'Ít' },
+  { value: 'MEDIUM', label: 'Vừa' },
+  { value: 'HEAVY', label: 'Nhiều' },
 ];
 
 const GROUPS: SymptomGroup[] = [
-  { category: 'EMOTIONAL', title: 'Tâm trạng', description: 'Bạn có thể chọn nhiều cảm xúc trong ngày.', icon: 'mood', accentClassName: 'text-amber-500 bg-amber-50' },
-  { category: 'PHYSICAL', title: 'Triệu chứng cơ thể', description: 'Ghi lại các dấu hiệu bạn đang cảm nhận.', icon: 'monitor_heart', accentClassName: 'text-rose-500 bg-rose-50' },
-  { category: 'OTHER', title: 'Tiêu hóa', description: 'Các thay đổi tiêu hóa thường gặp trong chu kỳ.', icon: 'spa', accentClassName: 'text-fuchsia-500 bg-fuchsia-50' },
-  { category: 'FLUID', title: 'Tiết dịch âm đạo', description: 'Chọn mô tả phù hợp nhất trong ngày.', icon: 'water_drop', accentClassName: 'text-violet-500 bg-violet-50', singleSelect: true },
+  { kind: 'BODY', title: 'Đau và cơ thể', description: 'Ghi lại những thay đổi bạn đang cảm nhận.', Icon: Heartbeat, accentClassName: 'text-rose-500 bg-rose-50' },
+  { kind: 'DIGESTIVE', title: 'Tiêu hóa', description: 'Các thay đổi tiêu hóa thường gặp trong chu kỳ.', Icon: BowlFood, accentClassName: 'text-fuchsia-500 bg-fuchsia-50' },
+  { kind: 'EMOTIONAL', title: 'Tâm trạng', description: 'Bạn có thể chọn nhiều cảm xúc trong ngày.', Icon: Smiley, accentClassName: 'text-amber-500 bg-amber-50' },
+  { kind: 'FLUID', title: 'Tiết dịch âm đạo', description: 'Chọn mô tả phù hợp nhất trong ngày.', Icon: Drop, accentClassName: 'text-violet-500 bg-violet-50' },
+  { kind: 'ATTENTION', title: 'Dấu hiệu cần lưu ý', description: 'Các dấu hiệu nên được theo dõi kỹ hoặc trao đổi với nhân viên y tế.', Icon: ShieldWarning, accentClassName: 'text-red-600 bg-red-50' },
 ];
 
 const COMMON_NAMES = ['Đau bụng', 'Mệt mỏi', 'Đầy hơi', 'Đau đầu', 'Ngực đau', 'Mất ngủ'];
 
-const ICON_BY_NAME: Record<string, string> = {
-  'Đau bụng': 'monitor_heart',
-  'Đau đầu': 'psychology',
-  'Mệt mỏi': 'nightlight',
-  'Đầy hơi': 'foggy',
-  'Nổi mụn': 'face',
-  'Đau lưng': 'monitor_heart',
-  'Ngực đau': 'favorite',
-  'Buồn nôn': 'mood',
-  'Mất ngủ': 'nightlight',
-  'Chóng mặt': 'progress_activity',
-  'Thèm ăn': 'local_mall',
-  'Ngứa âm đạo': 'privacy_tip',
-  'Khô âm đạo': 'water_drop',
+const ATTENTION_NAMES = new Set([
+  'Đau dữ dội',
+  'Chảy máu giữa kỳ',
+  'Đau khi quan hệ',
+  'Đau khi tiểu tiện',
+  'Đau khi đại tiện',
+  'Sốt',
+  'Choáng hoặc ngất',
+  'Dịch có mùi hôi',
+  'Dịch đổi màu bất thường',
+]);
+
+const URGENT_NAMES = new Set(['Đau dữ dội', 'Choáng hoặc ngất']);
+const PAIN_NAMES = new Set(['Đau bụng', 'Đau vùng chậu', 'Đau dữ dội']);
+const ABNORMAL_FLUID_NAMES = new Set(['Dịch có mùi hôi', 'Dịch đổi màu bất thường', 'Bất thường', 'Trắng, vón cục', 'Xám']);
+
+const ICON_BY_NAME: Record<string, ComponentType<IconProps>> = {
+  'Đau bụng': Heartbeat,
+  'Đau vùng chậu': Heartbeat,
+  'Đau dữ dội': WarningCircle,
+  'Đau đầu': Brain,
+  'Mệt mỏi': MoonStars,
+  'Đầy hơi': BowlFood,
+  'Đau lưng': Bandaids,
+  'Ngực đau': Heartbeat,
+  'Buồn nôn': BowlFood,
+  'Mất ngủ': MoonStars,
+  'Chóng mặt': Sparkle,
+  'Thèm ăn': ForkKnife,
+  'Sốt': Thermometer,
+  'Choáng hoặc ngất': WarningCircle,
 };
+
+const SEVERITY_OPTIONS: Array<{ value: SymptomSeverity; label: string; description: string }> = [
+  { value: 'MILD', label: 'Nhẹ', description: 'Không ảnh hưởng sinh hoạt' },
+  { value: 'MODERATE', label: 'Vừa', description: 'Ảnh hưởng một phần' },
+  { value: 'SEVERE', label: 'Nặng', description: 'Cản trở hoạt động thường ngày' },
+];
 
 const DISPLAY_NAME_FIXES: Record<string, string> = {
   'spotted form': 'Dạng đốm',
@@ -124,11 +171,23 @@ function formatDate(value: string) {
   return fromIsoDate(value).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-function getIcon(symptom: SymptomDictionary) {
-  if (symptom.category === 'EMOTIONAL') return 'mood';
-  if (symptom.category === 'FLUID') return 'water_drop';
-  if (symptom.category === 'OTHER') return 'spa';
-  return ICON_BY_NAME[getDisplayName(symptom)] ?? 'monitor_heart';
+function getSymptomIcon(symptom: SymptomDictionary) {
+  const name = getDisplayName(symptom);
+  if (ICON_BY_NAME[name]) return ICON_BY_NAME[name];
+  if (symptom.category === 'EMOTIONAL') return Smiley;
+  if (symptom.category === 'FLUID') return Drop;
+  if (symptom.category === 'OTHER') return BowlFood;
+  return FirstAid;
+}
+
+function matchesGroup(symptom: SymptomDictionary, kind: SymptomGroup['kind']) {
+  const name = getDisplayName(symptom);
+  if (kind === 'ATTENTION') return ATTENTION_NAMES.has(name);
+  if (ATTENTION_NAMES.has(name)) return false;
+  if (kind === 'BODY') return symptom.category === 'PHYSICAL';
+  if (kind === 'DIGESTIVE') return symptom.category === 'OTHER';
+  if (kind === 'EMOTIONAL') return symptom.category === 'EMOTIONAL';
+  return symptom.category === 'FLUID';
 }
 
 export default function DailyLogModal({ open, mode, initialDate, onClose, onSaved }: DailyLogModalProps) {
@@ -136,6 +195,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
   const today = useMemo(() => toIsoDate(new Date()), []);
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedSymptoms, setSelectedSymptoms] = useState<Set<number>>(new Set());
+  const [symptomSeverities, setSymptomSeverities] = useState<Map<number, SymptomSeverity>>(new Map());
   const [flowIntensity, setFlowIntensity] = useState<FlowIntensity>('NONE');
   const [hasClots, setHasClots] = useState(false);
   const [notes, setNotes] = useState('');
@@ -196,6 +256,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
     setHasClots(log?.hasClots ?? false);
     setNotes(log?.notes ?? '');
     setSelectedSymptoms(new Set(log?.symptoms?.map((symptom) => symptom.symptomId) ?? []));
+    setSymptomSeverities(new Map(log?.symptoms?.map((symptom) => [symptom.symptomId, symptom.severity]) ?? []));
   }, [logQuery.data, logQuery.isFetching, logQuery.isLoading, open, selectedDate]);
 
   const rawDictionary = dictionaryQuery.data ?? [];
@@ -207,26 +268,63 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
   const normalizedSearch = search.trim().toLocaleLowerCase('vi-VN');
   const visibleGroups = GROUPS.map((group) => ({
     ...group,
-    symptoms: dedupedDictionary.filter((symptom) => symptom.category === group.category && (!normalizedSearch || getDisplayKey(symptom).includes(normalizedSearch))),
+    symptoms: dedupedDictionary.filter((symptom) => matchesGroup(symptom, group.kind) && (!normalizedSearch || getDisplayKey(symptom).includes(normalizedSearch))),
   })).filter((group) => group.symptoms.length > 0);
   const commonSymptoms = COMMON_NAMES
     .map((name) => dedupedDictionary.find((symptom) => getDisplayName(symptom) === name))
     .filter((symptom): symptom is SymptomDictionary => !!symptom);
 
   const toggleSymptom = (symptom: SymptomDictionary) => {
-    setSelectedSymptoms((current) => {
-      const next = new Set(current);
-      if (next.has(symptom.id)) {
+    const isSelected = selectedSymptoms.has(symptom.id);
+    if (isSelected) {
+      setSelectedSymptoms((current) => {
+        const next = new Set(current);
         next.delete(symptom.id);
         return next;
-      }
-      if (symptom.category === 'FLUID') {
-        dictionary.filter((item) => item.category === 'FLUID').forEach((item) => next.delete(item.id));
-      }
-      next.add(symptom.id);
-      return next;
-    });
+      });
+      setSymptomSeverities((current) => {
+        const next = new Map(current);
+        next.delete(symptom.id);
+        return next;
+      });
+      return;
+    }
+
+    if (symptom.category === 'FLUID') {
+      const fluidIds = dictionary.filter((item) => item.category === 'FLUID').map((item) => item.id);
+      setSelectedSymptoms((current) => {
+        const next = new Set(current);
+        fluidIds.forEach((id) => next.delete(id));
+        next.add(symptom.id);
+        return next;
+      });
+      setSymptomSeverities((current) => {
+        const next = new Map(current);
+        fluidIds.forEach((id) => next.delete(id));
+        next.set(symptom.id, 'MILD');
+        return next;
+      });
+      return;
+    }
+
+    setSelectedSymptoms((current) => new Set(current).add(symptom.id));
+    setSymptomSeverities((current) => new Map(current).set(symptom.id, 'MILD'));
   };
+
+  const selectedSymptomDetails = dedupedDictionary.filter((symptom) => selectedSymptoms.has(symptom.id));
+  const selectedNames = new Set(selectedSymptomDetails.map(getDisplayName));
+  const hasSeverePain = selectedSymptomDetails.some((symptom) =>
+    PAIN_NAMES.has(getDisplayName(symptom)) && symptomSeverities.get(symptom.id) === 'SEVERE');
+  const hasFeverWithConcern = selectedNames.has('Sốt')
+    && (selectedSymptomDetails.some((symptom) => PAIN_NAMES.has(getDisplayName(symptom)))
+      || selectedSymptomDetails.some((symptom) => ABNORMAL_FLUID_NAMES.has(getDisplayName(symptom))));
+  const hasUrgentSignal = hasSeverePain
+    || hasFeverWithConcern
+    || Array.from(URGENT_NAMES).some((name) => selectedNames.has(name));
+  const hasMedicalAttentionSignal = hasUrgentSignal
+    || selectedNames.has('Chảy máu giữa kỳ')
+    || selectedSymptomDetails.some((symptom) => ABNORMAL_FLUID_NAMES.has(getDisplayName(symptom)))
+    || (flowIntensity === 'HEAVY' && hasClots);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -241,7 +339,10 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
         hasClots,
         confirmPeriodStart,
         notes: notes.trim(),
-        symptoms: Array.from(selectedSymptoms).map((symptomId) => ({ symptomId, severity: 'MILD' })),
+        symptoms: Array.from(selectedSymptoms).map((symptomId) => ({
+          symptomId,
+          severity: symptomSeverities.get(symptomId) ?? 'MILD',
+        })),
       };
       await api.put(`/daily-logs/${selectedDate}`, payload);
     },
@@ -281,7 +382,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
       onClose={onClose}
       title={confirmPeriodStart ? 'Xác nhận bắt đầu kỳ' : 'Nhật ký sức khỏe'}
       description={confirmPeriodStart ? 'Ghi lượng kinh thực tế để xác nhận Ngày 1 của kỳ kinh mới.' : 'Chọn những thay đổi bạn ghi nhận trong ngày.'}
-      icon="monitor_heart"
+      icon={<Heartbeat size={22} weight="duotone" aria-hidden="true" />}
       maxWidthClassName="sm:max-w-5xl"
       bodyClassName="bg-slate-50/80"
       footer={footer}
@@ -294,7 +395,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
             className="flex size-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-rose-50"
             aria-label="Ngày trước"
           >
-            <span className="material-symbols-outlined">chevron_left</span>
+            <ArrowLeft size={20} weight="bold" aria-hidden="true" />
           </button>
           <div className="text-center">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-rose-500">
@@ -309,7 +410,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
             className="flex size-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-rose-50 disabled:opacity-25"
             aria-label="Ngày sau"
           >
-            <span className="material-symbols-outlined">chevron_right</span>
+            <ArrowRight size={20} weight="bold" aria-hidden="true" />
           </button>
         </div>
         <div className="mt-3 flex justify-center">
@@ -323,7 +424,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
           />
         </div>
         <label className="mt-4 flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2.5">
-          <span className="material-symbols-outlined text-[20px] text-slate-400">search</span>
+          <MagnifyingGlass size={20} className="text-slate-400" aria-hidden="true" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -343,7 +444,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
             {!search && commonSymptoms.length > 0 && (
               <section className="rounded-3xl border border-rose-100 bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px] text-rose-500">history</span>
+                  <ClockCounterClockwise size={20} className="text-rose-500" aria-hidden="true" />
                   <h3 className="text-sm font-extrabold text-slate-800">Thường ghi gần đây</h3>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -354,7 +455,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
 
             <section className="rounded-3xl border border-rose-100 bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-start gap-2">
-                <span className="material-symbols-outlined rounded-xl bg-rose-50 p-2 text-rose-500">water_drop</span>
+                <span className="rounded-xl bg-rose-50 p-2 text-rose-500"><Drop size={20} weight="fill" aria-hidden="true" /></span>
                 <div>
                   <h3 className="text-sm font-extrabold text-slate-800">Lượng kinh nguyệt</h3>
                   <p className="mt-0.5 text-xs text-slate-500">Ước tính lượng kinh trung bình trong ngày.</p>
@@ -368,7 +469,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
                     onClick={() => setFlowIntensity(option.value)}
                     className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition-colors ${flowIntensity === option.value ? 'border-rose-400 bg-rose-500 text-white' : 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-300'}`}
                   >
-                    <span className="material-symbols-outlined text-[17px]">{option.icon}</span>
+                    <Drop size={17} weight={flowIntensity === option.value ? 'fill' : 'regular'} aria-hidden="true" />
                     {option.label}
                   </button>
                 ))}
@@ -377,7 +478,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
                   onClick={() => setHasClots((current) => !current)}
                   className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition-colors ${hasClots ? 'border-rose-400 bg-rose-500 text-white' : 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-300'}`}
                 >
-                  <span className="material-symbols-outlined text-[17px]">bloodtype</span>
+                  <Drop size={17} weight={hasClots ? 'fill' : 'regular'} aria-hidden="true" />
                   Cục máu đông
                 </button>
               </div>
@@ -392,7 +493,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
                   </span>
                   {isExistingPeriodStart && (
                     <span className="mt-1 inline-flex items-center gap-1 w-fit rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                      <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                      <CheckCircle size={12} weight="fill" aria-hidden="true" />
                       Đã ghi nhận trong lịch sử chu kỳ
                     </span>
                   )}
@@ -411,9 +512,9 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
             </section>
 
             {visibleGroups.map((group) => (
-              <section key={group.category} className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
+              <section key={group.kind} className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-start gap-2">
-                  <span className={`material-symbols-outlined rounded-xl p-2 ${group.accentClassName}`}>{group.icon}</span>
+                  <span className={`rounded-xl p-2 ${group.accentClassName}`}><group.Icon size={20} weight="duotone" aria-hidden="true" /></span>
                   <div>
                     <h3 className="text-sm font-extrabold text-slate-800">{group.title}</h3>
                     <p className="mt-0.5 text-xs text-slate-500">{group.description}</p>
@@ -427,14 +528,69 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
 
             {visibleGroups.length === 0 && search && (
               <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-5 py-10 text-center">
-                <span className="material-symbols-outlined text-3xl text-slate-300">search_off</span>
+                <MagnifyingGlassMinus size={30} className="mx-auto text-slate-300" aria-hidden="true" />
                 <p className="mt-2 text-sm font-bold text-slate-600">Không tìm thấy triệu chứng phù hợp</p>
               </div>
             )}
 
+            {selectedSymptomDetails.length > 0 && (
+              <section className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-start gap-2">
+                  <span className="rounded-xl bg-violet-50 p-2 text-violet-500"><FirstAid size={20} weight="duotone" aria-hidden="true" /></span>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-800">Mức độ từng triệu chứng</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">Mức độ giúp Hi phân tích chính xác hơn, không dùng để chẩn đoán.</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {selectedSymptomDetails.map((symptom) => (
+                    <div key={symptom.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                      <p className="text-xs font-black text-slate-700">{getDisplayName(symptom)}</p>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                        {SEVERITY_OPTIONS.map((option) => {
+                          const active = (symptomSeverities.get(symptom.id) ?? 'MILD') === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setSymptomSeverities((current) => new Map(current).set(symptom.id, option.value))}
+                              className={`rounded-xl border px-3 py-2 text-left transition-colors ${active ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-200 bg-white text-slate-600 hover:border-violet-200'}`}
+                              aria-pressed={active}
+                            >
+                              <span className="block text-xs font-extrabold">{option.label}</span>
+                              <span className="mt-0.5 block text-[10px] font-semibold leading-snug opacity-75">{option.description}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {hasMedicalAttentionSignal && (
+              <section role="alert" className={`rounded-3xl border p-4 ${hasUrgentSignal ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+                <div className="flex items-start gap-3">
+                  <WarningCircle size={22} weight="fill" className={hasUrgentSignal ? 'text-red-600' : 'text-amber-600'} aria-hidden="true" />
+                  <div>
+                    <h3 className={`text-sm font-black ${hasUrgentSignal ? 'text-red-800' : 'text-amber-800'}`}>
+                      {hasUrgentSignal ? 'Bạn nên được hỗ trợ y tế sớm' : 'Bạn nên theo dõi và trao đổi với nhân viên y tế'}
+                    </h3>
+                    <p className={`mt-1 text-xs font-semibold leading-relaxed ${hasUrgentSignal ? 'text-red-700' : 'text-amber-700'}`}>
+                      {hasUrgentSignal
+                        ? 'Nếu đau dữ dội, choáng/ngất, sốt kèm đau hoặc tình trạng xấu đi nhanh, hãy liên hệ cơ sở y tế hoặc dịch vụ cấp cứu tại nơi bạn sống.'
+                        : 'Chảy máu bất thường, lượng kinh nhiều kèm cục máu đông hoặc dịch bất thường nên được bác sĩ đánh giá nếu kéo dài, tái diễn hoặc ảnh hưởng sinh hoạt.'}
+                    </p>
+                    <p className="mt-2 text-[10px] font-bold text-slate-500">Thông tin này không thay thế chẩn đoán hoặc tư vấn của bác sĩ.</p>
+                  </div>
+                </div>
+              </section>
+            )}
+
             <section className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px] text-teal-500">edit_note</span>
+                <NotePencil size={20} className="text-teal-500" aria-hidden="true" />
                 <h3 className="text-sm font-extrabold text-slate-800">Ghi chú</h3>
               </div>
               <textarea
@@ -453,13 +609,15 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
 }
 
 function SymptomChip({ symptom, active, onClick }: { symptom: SymptomDictionary; active: boolean; onClick: () => void }) {
+  const Icon = getSymptomIcon(symptom);
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition-all active:scale-[0.98] ${active ? 'border-rose-400 bg-rose-500 text-white shadow-sm' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-rose-200 hover:bg-rose-50'}`}
     >
-      <span className="material-symbols-outlined text-[17px]">{getIcon(symptom)}</span>
+      <Icon size={17} weight={active ? 'fill' : 'regular'} aria-hidden="true" />
       {getDisplayName(symptom)}
     </button>
   );

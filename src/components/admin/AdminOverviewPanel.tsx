@@ -2,6 +2,8 @@ import {
   BellRinging,
   ChatCircleDots,
   Heartbeat,
+  HeartStraight,
+  CrownSimple,
   Storefront,
   Users,
   WarningCircle,
@@ -29,6 +31,19 @@ export default function AdminOverviewPanel() {
   }
 
   const { overview, recentUsers, payosReport, affiliateReport, monthlyFinancials } = overviewQuery.data;
+  const subscriptionStats = overviewQuery.data.subscriptionStats ?? {
+    free: overview.usersTotal,
+    hiPro: 0,
+    hiMax: 0,
+    activePaidTotal: 0,
+  };
+  const coupleStats = overviewQuery.data.coupleStats ?? {
+    eligibleUsers: Math.max(overview.usersTotal - overview.adminsTotal, 0),
+    pairedUsers: 0,
+    pairedCouples: 0,
+    unpairedUsers: Math.max(overview.usersTotal - overview.adminsTotal, 0),
+    pairingRatePct: 0,
+  };
   const userMix = [
     { name: 'Nữ', value: overview.usersFemale, color: '#eb477e' },
     { name: 'Nam', value: overview.usersMale, color: '#3b82f6' },
@@ -39,6 +54,11 @@ export default function AdminOverviewPanel() {
     { label: 'Triệu chứng', value: overview.symptomsTotal, color: '#8b5cf6' },
     { label: 'AI chat', value: overview.chatMessagesTotal, color: '#38bdf8' },
   ];
+  const subscriptionMix = [
+    { name: 'Free', value: subscriptionStats.free, color: '#7ecae8' },
+    { name: 'Hi Pro', value: subscriptionStats.hiPro, color: '#a78bfa' },
+    { name: 'Hi Max', value: subscriptionStats.hiMax, color: '#f472b6' },
+  ].filter((item) => item.value > 0);
   const revenueMix = [
     { label: 'PayOS', value: payosReport.totalRevenueVnd ?? 0, color: '#eb477e' },
     { label: 'Affiliate', value: affiliateReport?.settledCommissionVnd ?? 0, color: '#10b981' },
@@ -48,6 +68,8 @@ export default function AdminOverviewPanel() {
     { label: 'Dữ liệu sức khỏe', value: overview.cyclesTotal + overview.symptomsTotal, detail: 'Chu kỳ và triệu chứng', Icon: Heartbeat },
     { label: 'Tin nhắn AI', value: overview.chatMessagesTotal, detail: 'Tổng lịch sử hội thoại', Icon: ChatCircleDots },
     { label: 'Thông báo chưa đọc', value: overview.unreadNotifications, detail: `${overview.notificationsTotal} thông báo đã tạo`, Icon: BellRinging },
+    { label: 'Gói đang hoạt động', value: subscriptionStats.activePaidTotal, detail: `${subscriptionStats.hiPro} Hi Pro, ${subscriptionStats.hiMax} Hi Max`, Icon: CrownSimple },
+    { label: 'Cặp đôi đã ghép', value: coupleStats.pairedCouples, detail: `${coupleStats.pairedUsers} người dùng đã kết nối`, Icon: HeartStraight },
   ];
 
   const actionItems = [
@@ -75,7 +97,7 @@ export default function AdminOverviewPanel() {
         <p className="mt-1 text-sm text-slate-500">Các chỉ số chính và việc cần kiểm tra trong hệ thống.</p>
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {metrics.map((metric) => (
           <article key={metric.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -86,6 +108,73 @@ export default function AdminOverviewPanel() {
             <p className="mt-1 text-xs text-slate-400">{metric.detail}</p>
           </article>
         ))}
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-slate-900">Phân bổ gói hiện tại</h3>
+              <p className="mt-1 text-xs text-slate-500">Chỉ tính gói do tài khoản trực tiếp sở hữu và còn hiệu lực.</p>
+            </div>
+            <CrownSimple size={22} weight="duotone" className="shrink-0 text-violet-500" />
+          </div>
+          {subscriptionMix.length > 0 ? (
+            <>
+              <div className="mt-3 h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={subscriptionMix} dataKey="value" nameKey="name" innerRadius={55} outerRadius={86} paddingAngle={4}>
+                      {subscriptionMix.map((item) => <Cell key={item.name} fill={item.color} />)}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${Number(value).toLocaleString('vi-VN')} tài khoản`, 'Số lượng']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {subscriptionMix.map((item) => (
+                  <span key={item.name} className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600">
+                    <span className="size-2 rounded-full" style={{ backgroundColor: item.color }} />
+                    {item.name}: {item.value.toLocaleString('vi-VN')}
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : <p className="py-16 text-center text-sm font-semibold text-slate-400">Chưa có dữ liệu gói.</p>}
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-slate-900">Tỷ lệ ghép đôi</h3>
+              <p className="mt-1 text-xs text-slate-500">Chỉ tính liên kết hai chiều giữa các tài khoản đang hoạt động.</p>
+            </div>
+            <HeartStraight size={22} weight="fill" className="shrink-0 text-pink-500" />
+          </div>
+          <div className="mt-8 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-5xl font-black tracking-tight text-slate-950">{coupleStats.pairingRatePct.toLocaleString('vi-VN')}%</p>
+              <p className="mt-2 text-sm font-semibold text-slate-500">{coupleStats.pairedCouples.toLocaleString('vi-VN')} cặp hợp lệ</p>
+            </div>
+            <div className="text-right text-xs font-bold text-slate-400">
+              <p>{coupleStats.pairedUsers.toLocaleString('vi-VN')} đã ghép</p>
+              <p className="mt-1">{coupleStats.unpairedUsers.toLocaleString('vi-VN')} chưa ghép</p>
+            </div>
+          </div>
+          <div className="mt-6 h-4 overflow-hidden rounded-full bg-slate-100" aria-label={`Tỷ lệ ghép đôi ${coupleStats.pairingRatePct}%`}>
+            <div className="h-full rounded-full bg-gradient-to-r from-sky-400 via-violet-400 to-pink-400 transition-[width] duration-500" style={{ width: `${Math.min(Math.max(coupleStats.pairingRatePct, 0), 100)}%` }} />
+          </div>
+          <div className="mt-8 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-pink-50 p-4">
+              <p className="text-xs font-bold text-pink-600">Người dùng hợp lệ</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">{coupleStats.eligibleUsers.toLocaleString('vi-VN')}</p>
+            </div>
+            <div className="rounded-2xl bg-violet-50 p-4">
+              <p className="text-xs font-bold text-violet-600">Đã kết nối</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">{coupleStats.pairedUsers.toLocaleString('vi-VN')}</p>
+            </div>
+          </div>
+        </section>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { clsx } from 'clsx';
 import { toast } from 'react-hot-toast';
@@ -8,10 +8,8 @@ import { getUserFacingError } from '../lib/userFacingError';
 import { ChatMessage } from '../types';
 import { useSubscription, type AiUsage } from '../hooks/useSubscription';
 import HiLogo from '../components/ui/HiLogo';
-import {
-  ChatMessageContent,
-} from '../components/chat/ChatMessageContent';
-import { ChatSession, formatChatTime, formatSessionLabel, mergeChatMessages, todaySessionDate } from '../components/chat/chatMessageUtils';
+import { ChatSession, formatSessionLabel, mergeChatMessages, todaySessionDate } from '../components/chat/chatMessageUtils';
+import HiAssistantThread from '../components/chat/HiAssistantThread';
 
 const femaleSuggestedQuestions = [
   'Chu kỳ trước đó của tôi là khi nào?',
@@ -39,10 +37,8 @@ export default function ChatPage() {
   const { user } = useAuthStore();
   const subscriptionQuery = useSubscription();
   const userId = user?._id ?? 'anonymous';
-  const [input, setInput] = useState('');
   const [sessionDate, setSessionDate] = useState(todaySessionDate());
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const isMale = user?.gender === 'male';
   const accent = isMale
     ? {
@@ -112,11 +108,7 @@ export default function ChatPage() {
     setOptimisticMessages([]);
   }, [userId]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isPending, isRealtimeTyping]);
-
-  const handleSend = (message = input.trim()) => {
+  const handleSend = (message: string) => {
     const nextMessage = message.trim();
     if (!nextMessage || isPending) return;
     const tempMessage: ChatMessage = {
@@ -127,16 +119,8 @@ export default function ChatPage() {
       createdAt: new Date().toISOString(),
       sessionDate,
     } as ChatMessage;
-    setInput('');
     setOptimisticMessages([tempMessage]);
     sendMessage(nextMessage);
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      handleSend();
-    }
   };
 
   return (
@@ -226,76 +210,12 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 px-4 py-5 md:px-6">
-            {isLoading ? (
-              <div className="flex h-full items-center justify-center text-sm font-bold text-slate-400">Đang tải tin nhắn...</div>
-            ) : messages.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center px-4 text-center">
-                <HiLogo size={64} className="mb-4" />
-                <p className="text-lg font-black text-slate-900">Bắt đầu trò chuyện với Hi AI</p>
-                <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
-                  Bạn có thể hỏi về Hi, gói dịch vụ, lịch chu kỳ, dữ liệu đã ghi nhận hoặc cách chăm sóc theo từng giai đoạn.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {messages.map((message) => (
-                  <div key={message._id} className={clsx('flex items-end gap-2', message.role === 'user' ? 'justify-end' : 'justify-start')}>
-                    {message.role === 'assistant' && (
-                      <HiLogo size={36} className="shrink-0" />
-                    )}
-                    <div className={clsx(
-                      'max-w-[78%] rounded-3xl px-4 py-3 text-sm font-semibold leading-relaxed shadow-sm',
-                      message.role === 'user'
-                        ? 'rounded-br-md bg-violet-600 text-white'
-                        : 'rounded-bl-md border border-white bg-white text-slate-700',
-                    )}>
-                      <ChatMessageContent content={message.content} />
-                      <p className={clsx('mt-1 text-[10px] font-bold opacity-60', message.role === 'user' ? 'text-right' : 'text-left')}>
-                        {formatChatTime(message.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {(isPending || isRealtimeTyping) && (
-              <div className="mt-4 flex items-end gap-2">
-                <HiLogo size={36} className="shrink-0" />
-                <div className="rounded-3xl rounded-bl-md border border-white bg-white px-4 py-3 shadow-sm">
-                  <div className="flex gap-1.5">
-                    {[0, 1, 2].map((index) => (
-                      <span key={index} className="size-2 animate-bounce rounded-full bg-slate-300" style={{ animationDelay: `${index * 150}ms` }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          <div className="border-t border-slate-100 bg-white px-4 py-4 md:px-5">
-            <div data-guide="chat-input" className="flex items-end gap-2 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-sm focus-within:border-sky-200 focus-within:ring-4 focus-within:ring-sky-50">
-              <textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Nhập câu hỏi... Enter để gửi"
-                rows={1}
-                className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-3 py-2.5 text-sm font-semibold leading-relaxed text-slate-800 outline-none placeholder:text-slate-300"
-              />
-              <button
-                type="button"
-                onClick={() => handleSend()}
-                disabled={!input.trim() || isPending}
-                className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Gửi tin nhắn"
-              >
-                <span className="material-symbols-outlined text-[18px]">send</span>
-              </button>
-            </div>
-          </div>
+          <HiAssistantThread
+            messages={messages}
+            isLoading={isLoading}
+            isRunning={isPending || isRealtimeTyping}
+            onSend={handleSend}
+          />
         </div>
       </section>
     </div>

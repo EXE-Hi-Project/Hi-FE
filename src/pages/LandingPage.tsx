@@ -912,7 +912,7 @@ export default function LandingPage() {
                           {formatPlanPrice(plan.planId === 'monthly' ? pricing.hiPro.basePrice : pricing.hiMax.basePrice)}
                         </span>
                       ) : null}
-                      <span className="bg-gradient-to-r from-sky-500 via-violet-500 to-pink-500 bg-clip-text text-4xl font-black tracking-tight text-transparent">
+                      <span className={`${BRAND_GRADIENT_TEXT} text-4xl font-black tracking-tight`}>
                         {plan.planId
                           ? formatPlanPrice(plan.planId === 'monthly' ? pricing.hiPro.currentPrice : pricing.hiMax.currentPrice)
                           : plan.price}

@@ -6,9 +6,10 @@ import api from '../../lib/api';
 import { getUserFacingError } from '../../lib/userFacingError';
 import { ChatMessage } from '../../types';
 import { useSubscription, type AiUsage } from '../../hooks/useSubscription';
-import { ChatMessageContent } from './ChatMessageContent';
-import { ChatSession, formatChatTime, formatSessionLabel, mergeChatMessages, todaySessionDate } from './chatMessageUtils';
+import { ChatSession, formatSessionLabel, mergeChatMessages, todaySessionDate } from './chatMessageUtils';
 import HiLogo from '../ui/HiLogo';
+import HiAssistantThread from './HiAssistantThread';
+import { ArrowsIn, ArrowsOut, X } from '@phosphor-icons/react';
 
 const QUICK_PROMPTS = [
   'Các tính năng của Hi là gì?',
@@ -37,10 +38,8 @@ export default function FloatingHiChat() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [input, setInput] = useState('');
   const [sessionDate, setSessionDate] = useState(todaySessionDate());
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const isSending = useRef(false);
   const userId = user?._id ?? 'anonymous';
   const subscriptionQuery = useSubscription();
@@ -49,7 +48,8 @@ export default function FloatingHiChat() {
     || user?.role === 'admin'
     || location.pathname === '/login'
     || location.pathname === '/register'
-    || location.pathname === '/onboarding';
+    || location.pathname === '/onboarding'
+    || location.pathname === '/chat';
 
   const sessionsQuery = useQuery<ChatSession[]>({
     queryKey: ['chat-sessions', userId],
@@ -87,8 +87,8 @@ export default function FloatingHiChat() {
     },
   });
 
-  const send = useCallback((rawValue?: string) => {
-    const value = (rawValue ?? input).trim();
+  const send = useCallback((rawValue: string) => {
+    const value = rawValue.trim();
     if (!value || sendMutation.isPending || isSending.current) return;
     isSending.current = true;
     const tempMessage: ChatMessage = {
@@ -99,7 +99,6 @@ export default function FloatingHiChat() {
       createdAt: new Date().toISOString(),
       sessionDate,
     } as ChatMessage;
-    setInput('');
     setOpen(true);
     setOptimisticMessages([tempMessage]);
     sendMutation.mutate(value, {
@@ -107,7 +106,7 @@ export default function FloatingHiChat() {
         isSending.current = false;
       }
     });
-  }, [input, sendMutation, sessionDate, userId]);
+  }, [sendMutation, sessionDate, userId]);
 
   useEffect(() => {
     setSessionDate(todaySessionDate());
@@ -148,10 +147,6 @@ export default function FloatingHiChat() {
       ...existing,
     ];
   }, [messages, sessionDate, sessionsQuery.data]);
-
-  useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [open, messages, sendMutation.isPending, isRealtimeTyping]);
 
   if (hidden) return null;
 
@@ -225,10 +220,10 @@ export default function FloatingHiChat() {
               </div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setExpanded((value) => !value)} className="flex size-9 items-center justify-center rounded-full bg-white/80 text-slate-400 transition-all hover:bg-sky-50 hover:text-sky-500" aria-label={expanded ? 'Thu gọn chat' : 'Mở rộng chat'}>
-                  <span className="material-symbols-outlined text-[20px]">{expanded ? 'close_fullscreen' : 'open_in_full'}</span>
+                  {expanded ? <ArrowsIn size={20} aria-hidden="true" /> : <ArrowsOut size={20} aria-hidden="true" />}
                 </button>
                 <button type="button" onClick={() => setOpen(false)} className="flex size-9 items-center justify-center rounded-full bg-white/80 text-slate-400 transition-all hover:bg-pink-50 hover:text-pink-500" aria-label="Đóng chat">
-                  <span className="material-symbols-outlined text-[20px]">close</span>
+                  <X size={20} weight="bold" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -241,77 +236,23 @@ export default function FloatingHiChat() {
               ))}
             </div>
 
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-slate-50 px-4 py-5">
-              {chatQuery.isLoading && <div className="h-12 w-2/3 animate-pulse rounded-2xl bg-white" />}
-              {!chatQuery.isLoading && messages.length === 0 && (
-                <div className="flex h-full flex-col items-center justify-center text-center">
-                  <span className="flex size-14 items-center justify-center rounded-3xl bg-violet-100 text-violet-600">
-                    <span className="material-symbols-outlined text-[28px]">chat_bubble</span>
-                  </span>
-                  <p className="mt-4 text-sm font-black text-slate-900">Bắt đầu trò chuyện với Hi AI</p>
-                  <p className="mt-1 max-w-[280px] text-xs leading-relaxed text-slate-500">
-                    Hỏi về Hi, chu kỳ, cảm xúc, triệu chứng hoặc dữ liệu sức khỏe đã lưu của bạn.
-                  </p>
-                </div>
-              )}
-              {messages.map((message) => (
-                <div key={message._id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={[
-                    'max-w-[84%] rounded-3xl px-4 py-3 text-sm font-semibold leading-relaxed shadow-sm',
-                    message.role === 'user'
-                      ? 'rounded-br-md bg-violet-600 text-white shadow-violet-100'
-                      : 'border border-slate-100 bg-white text-slate-700',
-                  ].join(' ')}>
-                    <ChatMessageContent content={message.content} />
-                    {message.role === 'user' && <p className="mt-1 text-right text-[10px] font-bold opacity-70">{formatChatTime(message.createdAt)}</p>}
-                  </div>
-                </div>
-              ))}
-              {(sendMutation.isPending || isRealtimeTyping) && (
-                <div className="flex justify-start">
-                  <div className="flex items-center gap-1 rounded-3xl border border-white bg-white px-4 py-3 shadow-sm">
-                    <span className="size-2 animate-bounce rounded-full bg-sky-300" />
-                    <span className="size-2 animate-bounce rounded-full bg-violet-300 [animation-delay:120ms]" />
-                    <span className="size-2 animate-bounce rounded-full bg-pink-300 [animation-delay:240ms]" />
-                  </div>
-                </div>
-              )}
-              {sendMutation.isError && (
-                <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
-                  {getUserFacingError(sendMutation.error, 'Hi AI chưa gửi được câu trả lời. Vui lòng thử lại.')}
-                </div>
-              )}
-              <div ref={bottomRef} />
-            </div>
-
-            <div className="border-t border-slate-100 bg-white p-3">
-              <div className="flex items-end gap-2 rounded-2xl border border-slate-100 bg-white px-3 py-2 shadow-sm focus-within:border-sky-200 focus-within:ring-4 focus-within:ring-sky-50">
-                <textarea
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) {
-                      event.preventDefault();
-                      send();
-                    }
-                  }}
-                  rows={1}
-                  placeholder="Nhập câu hỏi cho Hi AI..."
-                  className="max-h-28 min-h-10 flex-1 resize-none bg-transparent py-2 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-300"
-                />
-                <button type="button" onClick={() => send()} disabled={!input.trim() || sendMutation.isPending} className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-sm transition-colors hover:bg-violet-700 disabled:opacity-40" aria-label="Gửi tin nhắn">
-                  <span className="material-symbols-outlined text-[18px]">send</span>
-                </button>
-              </div>
-              <p className="mt-1.5 text-center text-[10px] font-semibold text-slate-300">Enter để gửi · Shift+Enter xuống dòng</p>
-            </div>
+            <HiAssistantThread
+              messages={messages}
+              isLoading={chatQuery.isLoading}
+              isRunning={sendMutation.isPending || isRealtimeTyping}
+              errorMessage={sendMutation.isError
+                ? getUserFacingError(sendMutation.error, 'Hi AI chưa gửi được câu trả lời. Vui lòng thử lại.')
+                : undefined}
+              compact
+              onSend={send}
+            />
           </section>
         </div>
       )}
 
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex size-14 items-center justify-center rounded-full border border-slate-100 bg-white shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl" aria-label="Mở Hi AI chat">
         {open
-          ? <span className="material-symbols-outlined text-[26px] text-slate-500">close</span>
+          ? <X size={26} weight="bold" className="text-slate-500" aria-hidden="true" />
           : <HiLogo size={52} radius={24} />}
       </button>
     </div>
