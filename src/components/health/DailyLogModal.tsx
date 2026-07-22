@@ -7,24 +7,49 @@ import type { IconProps } from '@phosphor-icons/react';
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowsClockwise,
   Bandaids,
+  BatteryLow,
   Brain,
   CheckCircle,
+  CircleHalf,
+  CirclesThree,
+  CirclesThreePlus,
   ClockCounterClockwise,
+  Cloud,
+  DotsThreeCircle,
   Drop,
+  DropHalf,
+  DropHalfBottom,
+  DropSlash,
+  Egg,
   FirstAid,
   ForkKnife,
+  HeartBreak,
   Heartbeat,
+  Lightning,
   MagnifyingGlass,
   MagnifyingGlassMinus,
   MoonStars,
   NotePencil,
+  Palette,
+  PersonArmsSpread,
+  PersonSimple,
+  Prohibit,
+  Pulse,
   ShieldWarning,
   Smiley,
+  SmileyAngry,
+  SmileyNervous,
+  SmileySad,
+  SmileyXEyes,
   Sparkle,
-  BowlFood,
-  Thermometer,
+  ThermometerHot,
+  Toilet,
+  ToiletPaper,
+  WarningDiamond,
   WarningCircle,
+  Wind,
 } from '@phosphor-icons/react';
 import type { DailyLog, FlowIntensity, SymptomDictionary, SymptomSeverity, UpsertDailyLogDto, CycleRecord } from '../../types/shared';
 import api from '../../lib/api';
@@ -57,8 +82,8 @@ const FLOW_OPTIONS: Array<{ value: FlowIntensity; label: string }> = [
 ];
 
 const GROUPS: SymptomGroup[] = [
-  { kind: 'BODY', title: 'Đau và cơ thể', description: 'Ghi lại những thay đổi bạn đang cảm nhận.', Icon: Heartbeat, accentClassName: 'text-rose-500 bg-rose-50' },
-  { kind: 'DIGESTIVE', title: 'Tiêu hóa', description: 'Các thay đổi tiêu hóa thường gặp trong chu kỳ.', Icon: BowlFood, accentClassName: 'text-fuchsia-500 bg-fuchsia-50' },
+  { kind: 'BODY', title: 'Đau và cơ thể', description: 'Ghi lại những thay đổi bạn đang cảm nhận.', Icon: PersonArmsSpread, accentClassName: 'text-rose-500 bg-rose-50' },
+  { kind: 'DIGESTIVE', title: 'Tiêu hóa', description: 'Các thay đổi tiêu hóa thường gặp trong chu kỳ.', Icon: ForkKnife, accentClassName: 'text-fuchsia-500 bg-fuchsia-50' },
   { kind: 'EMOTIONAL', title: 'Tâm trạng', description: 'Bạn có thể chọn nhiều cảm xúc trong ngày.', Icon: Smiley, accentClassName: 'text-amber-500 bg-amber-50' },
   { kind: 'FLUID', title: 'Tiết dịch âm đạo', description: 'Chọn mô tả phù hợp nhất trong ngày.', Icon: Drop, accentClassName: 'text-violet-500 bg-violet-50' },
   { kind: 'ATTENTION', title: 'Dấu hiệu cần lưu ý', description: 'Các dấu hiệu nên được theo dõi kỹ hoặc trao đổi với nhân viên y tế.', Icon: ShieldWarning, accentClassName: 'text-red-600 bg-red-50' },
@@ -83,20 +108,49 @@ const PAIN_NAMES = new Set(['Đau bụng', 'Đau vùng chậu', 'Đau dữ dội
 const ABNORMAL_FLUID_NAMES = new Set(['Dịch có mùi hôi', 'Dịch đổi màu bất thường', 'Bất thường', 'Trắng, vón cục', 'Xám']);
 
 const ICON_BY_NAME: Record<string, ComponentType<IconProps>> = {
-  'Đau bụng': Heartbeat,
-  'Đau vùng chậu': Heartbeat,
-  'Đau dữ dội': WarningCircle,
+  'Đau bụng': Pulse,
   'Đau đầu': Brain,
-  'Mệt mỏi': MoonStars,
-  'Đầy hơi': BowlFood,
-  'Đau lưng': Bandaids,
+  'Mệt mỏi': BatteryLow,
+  'Nổi mụn': CirclesThree,
+  'Đau lưng': PersonSimple,
   'Ngực đau': Heartbeat,
-  'Buồn nôn': BowlFood,
   'Mất ngủ': MoonStars,
-  'Chóng mặt': Sparkle,
+  'Chóng mặt': ArrowsClockwise,
   'Thèm ăn': ForkKnife,
-  'Sốt': Thermometer,
-  'Choáng hoặc ngất': WarningCircle,
+  'Ngứa âm đạo': Bandaids,
+  'Khô âm đạo': DropSlash,
+  'Đau vùng chậu': PersonArmsSpread,
+  'Đau dữ dội': WarningCircle,
+  'Chảy máu giữa kỳ': DropHalf,
+  'Đau khi quan hệ': HeartBreak,
+  'Đau khi tiểu tiện': DropHalfBottom,
+  'Đau khi đại tiện': Toilet,
+  'Sốt': ThermometerHot,
+  'Choáng hoặc ngất': WarningDiamond,
+  'Bình tĩnh': Smiley,
+  'Vui vẻ': Smiley,
+  'Mạnh mẽ': Lightning,
+  'Phấn chấn': Sparkle,
+  'Thất thường': ArrowsClockwise,
+  'Bực bội': SmileyAngry,
+  'Buồn': SmileySad,
+  'Lo lắng': SmileyNervous,
+  'Thiếu năng lượng': BatteryLow,
+  'Buồn nôn': SmileyXEyes,
+  'Đầy hơi': Wind,
+  'Táo bón': Prohibit,
+  'Tiêu chảy': ToiletPaper,
+  'Không có dịch': DropSlash,
+  'Trắng đục': Cloud,
+  'Ẩm ướt': Drop,
+  'Dạng dính': DropHalf,
+  'Như lòng trắng trứng': Egg,
+  'Dạng đốm': DotsThreeCircle,
+  'Bất thường': WarningCircle,
+  'Trắng, vón cục': CirclesThreePlus,
+  'Xám': CircleHalf,
+  'Dịch có mùi hôi': WarningDiamond,
+  'Dịch đổi màu bất thường': Palette,
 };
 
 const SEVERITY_OPTIONS: Array<{ value: SymptomSeverity; label: string; description: string }> = [
@@ -108,6 +162,7 @@ const SEVERITY_OPTIONS: Array<{ value: SymptomSeverity; label: string; descripti
 const DISPLAY_NAME_FIXES: Record<string, string> = {
   'spotted form': 'Dạng đốm',
   spotting: 'Dạng đốm',
+  'bệnh tĩnh': 'Bình tĩnh',
 };
 
 function getDisplayName(symptom: SymptomDictionary) {
@@ -176,7 +231,7 @@ function getSymptomIcon(symptom: SymptomDictionary) {
   if (ICON_BY_NAME[name]) return ICON_BY_NAME[name];
   if (symptom.category === 'EMOTIONAL') return Smiley;
   if (symptom.category === 'FLUID') return Drop;
-  if (symptom.category === 'OTHER') return BowlFood;
+  if (symptom.category === 'OTHER') return ForkKnife;
   return FirstAid;
 }
 
@@ -469,7 +524,9 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
                     onClick={() => setFlowIntensity(option.value)}
                     className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition-colors ${flowIntensity === option.value ? 'border-rose-400 bg-rose-500 text-white' : 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-300'}`}
                   >
-                    <Drop size={17} weight={flowIntensity === option.value ? 'fill' : 'regular'} aria-hidden="true" />
+                    {option.value === 'NONE'
+                      ? <DropSlash size={17} weight={flowIntensity === option.value ? 'bold' : 'regular'} aria-hidden="true" />
+                      : <Drop size={17} weight={flowIntensity === option.value ? 'fill' : 'regular'} aria-hidden="true" />}
                     {option.label}
                   </button>
                 ))}
@@ -478,7 +535,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
                   onClick={() => setHasClots((current) => !current)}
                   className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition-colors ${hasClots ? 'border-rose-400 bg-rose-500 text-white' : 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-300'}`}
                 >
-                  <Drop size={17} weight={hasClots ? 'fill' : 'regular'} aria-hidden="true" />
+                  <CirclesThreePlus size={17} weight={hasClots ? 'fill' : 'regular'} aria-hidden="true" />
                   Cục máu đông
                 </button>
               </div>
@@ -617,7 +674,7 @@ function SymptomChip({ symptom, active, onClick }: { symptom: SymptomDictionary;
       aria-pressed={active}
       className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition-all active:scale-[0.98] ${active ? 'border-rose-400 bg-rose-500 text-white shadow-sm' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-rose-200 hover:bg-rose-50'}`}
     >
-      <Icon size={17} weight={active ? 'fill' : 'regular'} aria-hidden="true" />
+      <Icon size={18} weight={active ? 'fill' : 'duotone'} className="shrink-0" aria-hidden="true" />
       {getDisplayName(symptom)}
     </button>
   );
