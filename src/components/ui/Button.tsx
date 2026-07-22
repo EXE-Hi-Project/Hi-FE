@@ -1,15 +1,19 @@
-import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { forwardRef, type ReactNode } from 'react';
 import { clsx } from 'clsx';
+import { motion, useReducedMotion, type HTMLMotionProps } from 'motion/react';
+import { motionTransition, pressMotion } from '../../lib/motion';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'icon';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   fullWidth?: boolean;
+  children?: ReactNode;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = 'primary', size = 'md', loading, fullWidth, children, className, disabled, ...props }, ref) => {
+    const reduceMotion = useReducedMotion();
     const base = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none active:scale-[0.98]';
     const variants = {
       primary: 'hi-btn-primary text-white focus:ring-pink-300',
@@ -25,9 +29,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: variant === 'icon' ? 'h-11 w-11 text-base' : 'px-6 py-3 text-base',
     };
     return (
-      <button
+      <motion.button
         ref={ref}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
+        whileTap={reduceMotion || disabled || loading ? undefined : pressMotion}
+        transition={motionTransition.quick}
         className={clsx(base, variants[variant], sizes[size], fullWidth && 'w-full', className)}
         {...props}
       >
@@ -38,7 +45,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           </svg>
         )}
         {children}
-      </button>
+      </motion.button>
     );
   }
 );
