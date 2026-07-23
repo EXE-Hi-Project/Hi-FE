@@ -15,6 +15,7 @@
   a,
   [role='button'] {
     -webkit-tap-highlight-color: transparent;
+    transition-duration: 180ms;
     transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
   }
   button:focus-visible,
@@ -23,6 +24,27 @@
     outline: 2px solid rgba(235, 71, 126, 0.72);
     outline-offset: 2px;
   }
+}
+
+.hi-scroll-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
+  height: 3px;
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg, #7ecae8, #c9a8e0 48%, #eb477e);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(button, a, [role='button']):not(:disabled) {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  }
+}
+
+html.meta-in-app-browser .hi-scroll-progress {
+  display: none;
 }
 
 html.meta-in-app-browser .auth-shell {
@@ -337,6 +359,10 @@ html.meta-in-app-browser .auth-glass-panel {
     animation: none !important;
     transform: none !important;
     box-shadow: none !important;
+  }
+
+  .hi-scroll-progress {
+    display: none;
   }
 }
 

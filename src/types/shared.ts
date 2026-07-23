@@ -57,6 +57,7 @@ export interface PartnerSharingPreferences {
 }
 
 export interface PartnerExperiencePreferences {
+  dailyHealthTipsEmailEnabled?: boolean;
   dailyQuestionsEnabled?: boolean;
   contextualCareSuggestionsEnabled?: boolean;
   coupleQuestionAnswerEmailEnabled?: boolean;

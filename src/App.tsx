@@ -9,6 +9,7 @@ import { getOrCreateSessionId, trackEvent } from './utils/analytics';
 import UserGuideProvider from './components/onboarding/UserGuideProvider';
 import MaintenanceGate from './components/maintenance/MaintenanceGate';
 import SeoHead from './seo/SeoHead';
+import RouteMotionEffects from './components/motion/RouteMotionEffects';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -205,6 +206,7 @@ export default function App() {
     <MaintenanceGate>
       <UserGuideProvider>
         <SeoHead />
+        <RouteMotionEffects />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
       <Route path="/" element={<HomeRoute />} />

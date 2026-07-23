@@ -7,54 +7,32 @@ import type { IconProps } from '@phosphor-icons/react';
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowsClockwise,
-  Bandaids,
-  BatteryLow,
-  Brain,
   CheckCircle,
-  CircleHalf,
-  CirclesThree,
   CirclesThreePlus,
   ClockCounterClockwise,
-  Cloud,
-  DotsThreeCircle,
   Drop,
-  DropHalf,
-  DropHalfBottom,
   DropSlash,
-  Egg,
   FirstAid,
   ForkKnife,
-  HeartBreak,
   Heartbeat,
-  Lightning,
   MagnifyingGlass,
   MagnifyingGlassMinus,
-  MoonStars,
   NotePencil,
-  Palette,
   PersonArmsSpread,
-  PersonSimple,
-  Prohibit,
-  Pulse,
   ShieldWarning,
   Smiley,
-  SmileyAngry,
-  SmileyNervous,
-  SmileySad,
-  SmileyXEyes,
-  Sparkle,
-  ThermometerHot,
-  Toilet,
-  ToiletPaper,
-  WarningDiamond,
   WarningCircle,
-  Wind,
 } from '@phosphor-icons/react';
 import type { DailyLog, FlowIntensity, SymptomDictionary, SymptomSeverity, UpsertDailyLogDto, CycleRecord } from '../../types/shared';
 import api from '../../lib/api';
 import { getUserFacingError } from '../../lib/userFacingError';
 import ResponsiveModal from '../ui/ResponsiveModal';
+import {
+  dedupeSymptoms,
+  getSymptomDisplayKey as getDisplayKey,
+  getSymptomDisplayName as getDisplayName,
+  getSymptomIcon,
+} from './symptomCatalog';
 
 export type DailyLogMode = 'default' | 'periodStart';
 
@@ -107,107 +85,11 @@ const URGENT_NAMES = new Set(['Đau dữ dội', 'Choáng hoặc ngất']);
 const PAIN_NAMES = new Set(['Đau bụng', 'Đau vùng chậu', 'Đau dữ dội']);
 const ABNORMAL_FLUID_NAMES = new Set(['Dịch có mùi hôi', 'Dịch đổi màu bất thường', 'Bất thường', 'Trắng, vón cục', 'Xám']);
 
-const ICON_BY_NAME: Record<string, ComponentType<IconProps>> = {
-  'Đau bụng': Pulse,
-  'Đau đầu': Brain,
-  'Mệt mỏi': BatteryLow,
-  'Nổi mụn': CirclesThree,
-  'Đau lưng': PersonSimple,
-  'Ngực đau': Heartbeat,
-  'Mất ngủ': MoonStars,
-  'Chóng mặt': ArrowsClockwise,
-  'Thèm ăn': ForkKnife,
-  'Ngứa âm đạo': Bandaids,
-  'Khô âm đạo': DropSlash,
-  'Đau vùng chậu': PersonArmsSpread,
-  'Đau dữ dội': WarningCircle,
-  'Chảy máu giữa kỳ': DropHalf,
-  'Đau khi quan hệ': HeartBreak,
-  'Đau khi tiểu tiện': DropHalfBottom,
-  'Đau khi đại tiện': Toilet,
-  'Sốt': ThermometerHot,
-  'Choáng hoặc ngất': WarningDiamond,
-  'Bình tĩnh': Smiley,
-  'Vui vẻ': Smiley,
-  'Mạnh mẽ': Lightning,
-  'Phấn chấn': Sparkle,
-  'Thất thường': ArrowsClockwise,
-  'Bực bội': SmileyAngry,
-  'Buồn': SmileySad,
-  'Lo lắng': SmileyNervous,
-  'Thiếu năng lượng': BatteryLow,
-  'Buồn nôn': SmileyXEyes,
-  'Đầy hơi': Wind,
-  'Táo bón': Prohibit,
-  'Tiêu chảy': ToiletPaper,
-  'Không có dịch': DropSlash,
-  'Trắng đục': Cloud,
-  'Ẩm ướt': Drop,
-  'Dạng dính': DropHalf,
-  'Như lòng trắng trứng': Egg,
-  'Dạng đốm': DotsThreeCircle,
-  'Bất thường': WarningCircle,
-  'Trắng, vón cục': CirclesThreePlus,
-  'Xám': CircleHalf,
-  'Dịch có mùi hôi': WarningDiamond,
-  'Dịch đổi màu bất thường': Palette,
-};
-
 const SEVERITY_OPTIONS: Array<{ value: SymptomSeverity; label: string; description: string }> = [
   { value: 'MILD', label: 'Nhẹ', description: 'Không ảnh hưởng sinh hoạt' },
   { value: 'MODERATE', label: 'Vừa', description: 'Ảnh hưởng một phần' },
   { value: 'SEVERE', label: 'Nặng', description: 'Cản trở hoạt động thường ngày' },
 ];
-
-const DISPLAY_NAME_FIXES: Record<string, string> = {
-  'spotted form': 'Dạng đốm',
-  spotting: 'Dạng đốm',
-  'bệnh tĩnh': 'Bình tĩnh',
-};
-
-function getDisplayName(symptom: SymptomDictionary) {
-  const name = symptom.name.trim();
-  const directFix = DISPLAY_NAME_FIXES[name.toLocaleLowerCase('en-US')];
-  if (directFix) return directFix;
-
-  const lowerName = name.toLocaleLowerCase('vi-VN');
-  const compactName = lowerName.replace(/\s+/g, ' ');
-
-  if (name.includes('�')) {
-    if (/^ch.*ng mặt/.test(compactName)) return 'Chóng mặt';
-    if (/^kh.*m đạo/.test(compactName)) return 'Khô âm đạo';
-    if (/^ng.*m đạo/.test(compactName)) return 'Ngứa âm đạo';
-    if (/^th.*m ăn/.test(compactName)) return 'Thèm ăn';
-    if (/^ti.*u chảy/.test(compactName)) return 'Tiêu chảy';
-    if (/^t.*o b.*n/.test(compactName)) return 'Táo bón';
-    if (/^bu.*n n.*n/.test(compactName)) return 'Buồn nôn';
-    if (/^d.*ng d.*nh/.test(compactName)) return 'Dạng dính';
-    if (/^kh.*ng c.* d.*ch/.test(compactName)) return 'Không có dịch';
-    if (/^nh.* l.*ng trắng trứng/.test(compactName)) return 'Như lòng trắng trứng';
-    if (/^trắng, v.*n c.*c/.test(compactName)) return 'Trắng, vón cục';
-    if (/^x.*m$/.test(compactName)) return 'Xám';
-  }
-
-  return name;
-}
-
-function getDisplayKey(symptom: SymptomDictionary) {
-  return getDisplayName(symptom).toLocaleLowerCase('vi-VN');
-}
-
-function dedupeSymptoms(symptoms: SymptomDictionary[], selectedSymptoms: Set<number>) {
-  const byDisplayName = new Map<string, SymptomDictionary>();
-
-  symptoms.forEach((symptom) => {
-    const key = getDisplayKey(symptom);
-    const current = byDisplayName.get(key);
-    if (!current || selectedSymptoms.has(symptom.id)) {
-      byDisplayName.set(key, symptom);
-    }
-  });
-
-  return Array.from(byDisplayName.values());
-}
 
 function toIsoDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -224,15 +106,6 @@ function addDays(value: string, amount: number) {
 
 function formatDate(value: string) {
   return fromIsoDate(value).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' });
-}
-
-function getSymptomIcon(symptom: SymptomDictionary) {
-  const name = getDisplayName(symptom);
-  if (ICON_BY_NAME[name]) return ICON_BY_NAME[name];
-  if (symptom.category === 'EMOTIONAL') return Smiley;
-  if (symptom.category === 'FLUID') return Drop;
-  if (symptom.category === 'OTHER') return ForkKnife;
-  return FirstAid;
 }
 
 function matchesGroup(symptom: SymptomDictionary, kind: SymptomGroup['kind']) {

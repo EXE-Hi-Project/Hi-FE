@@ -22,6 +22,7 @@
     "@stripe/stripe-js": "^9.7.0",
     "@tanstack/react-query": "^5.12.0",
     "axios": "^1.17.0",
+    "gsap": "^3.13.0",
     "maplibre-gl": "^5.24.0",
     "motion": "^12.42.2",
     "react": "^18.2.0",

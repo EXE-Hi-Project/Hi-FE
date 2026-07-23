@@ -17,6 +17,7 @@ interface NotificationSettings {
   periodUpcomingEnabled: boolean;
   fertilityWindowEnabled: boolean;
   dailyHealthTipsEnabled: boolean;
+  dailyHealthTipsEmailEnabled: boolean;
   partnerPeriodAlertEnabled: boolean;
   partnerMoodUpdatesEnabled: boolean;
   partnerCareTipsEnabled: boolean;
@@ -57,6 +58,7 @@ const DEFAULT_SETTINGS: NotificationSettings = {
   periodUpcomingEnabled: true,
   fertilityWindowEnabled: false,
   dailyHealthTipsEnabled: true,
+  dailyHealthTipsEmailEnabled: false,
   partnerPeriodAlertEnabled: true,
   partnerMoodUpdatesEnabled: true,
   partnerCareTipsEnabled: false,
@@ -482,6 +484,15 @@ export default function NotificationSettingsPanel({ variant }: { variant: Varian
         {/* Phân loại các cài đặt liên quan tới gửi mail lại với nhau, thiết kế gọn gàng */}
         {settings.emailEnabled && (
           <div className="border-t border-slate-200/60 pt-4 space-y-3">
+            <div className="divide-y divide-slate-100/60 border-b border-slate-100/60 pb-3">
+              <SettingRow
+                title="Email lời khuyên sức khỏe hằng ngày"
+                desc="Mặc định tắt. Chỉ gửi email khi bạn chủ động bật lựa chọn này."
+                checked={settings.dailyHealthTipsEmailEnabled}
+                onChange={(value) => update('dailyHealthTipsEmailEnabled', value)}
+                accent={variant}
+              />
+            </div>
             <div>
               <p className="text-xs font-black text-slate-400 uppercase tracking-wider">Email câu hỏi cặp đôi</p>
               <p className="text-[10px] font-semibold text-slate-400 mt-0.5 leading-relaxed">
