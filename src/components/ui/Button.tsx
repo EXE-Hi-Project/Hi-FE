@@ -1,7 +1,7 @@
 import { forwardRef, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { motion, useReducedMotion, type HTMLMotionProps } from 'motion/react';
-import { motionTransition, pressMotion } from '../../lib/motion';
+import { hoverMotion, motionTransition, pressMotion } from '../../lib/motion';
 
 interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'icon';
@@ -33,6 +33,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
+        whileHover={reduceMotion || disabled || loading ? undefined : hoverMotion}
         whileTap={reduceMotion || disabled || loading ? undefined : pressMotion}
         transition={motionTransition.quick}
         className={clsx(base, variants[variant], sizes[size], fullWidth && 'w-full', className)}
