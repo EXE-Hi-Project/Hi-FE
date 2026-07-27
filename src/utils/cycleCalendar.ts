@@ -39,44 +39,10 @@ export function isWithinIso(dateIso: string, startDate?: string | null, endDate?
   return dateIso >= start && dateIso <= end;
 }
 
-function daysBetween(startIso: string, endIso: string) {
-  const start = fromIsoDate(startIso);
-  const end = fromIsoDate(endIso);
-  if (!start || !end) return 0;
-  const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
-  const endUtc = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
-  return Math.round((endUtc - startUtc) / 86_400_000);
-}
-
-function projectIsoAround(dateIso: string, anchorIso?: string | null, cycleLength = 28) {
-  if (!anchorIso) return null;
-  const anchor = anchorIso.slice(0, 10);
-  const length = Math.max(10, Math.round(cycleLength || 28));
-  const diff = daysBetween(anchor, dateIso);
-  const offsetCycles = Math.round(diff / length);
-  return addDays(anchor, offsetCycles * length);
-}
-
-function getProjectedWindow(
-  dateIso: string,
-  startIso?: string | null,
-  endIso?: string | null,
-  cycleLength = 28,
-) {
-  if (!startIso) return null;
-  const projectedStart = projectIsoAround(dateIso, startIso, cycleLength);
-  if (!projectedStart) return null;
-  const duration = endIso ? Math.max(0, daysBetween(startIso.slice(0, 10), endIso.slice(0, 10))) : 0;
-  return {
-    start: projectedStart,
-    end: addDays(projectedStart, duration),
-  };
-}
-
 function getRecordedPeriodEnd(cycle: CycleRecord, insights?: CycleInsights | null) {
   const start = cycle.startDate.slice(0, 10);
   if (cycle.endDate) return cycle.endDate.slice(0, 10);
-  const isOngoing = cycle.status === 'ONGOING'
+  const isOngoing = cycle.status === 'ONGOING' || cycle.status === 'NEEDS_CONFIRMATION'
     || (insights?.periodOngoing && insights.lastRecordedStartDate?.slice(0, 10) === start);
   if (isOngoing) {
     return cycle.lastBleedingDate?.slice(0, 10) ?? addDays(start, Math.max(cycle.periodLength || 1, 1) - 1);
@@ -119,7 +85,7 @@ export function getCycleDayKind(date: Date, cycles: CycleRecord[], insights?: Cy
 
   for (const cycle of cycles) {
     const start = cycle.startDate.slice(0, 10);
-    const isOngoing = cycle.status === 'ONGOING'
+    const isOngoing = cycle.status === 'ONGOING' || cycle.status === 'NEEDS_CONFIRMATION'
       || (insights?.periodOngoing && insights.lastRecordedStartDate?.slice(0, 10) === start);
     const end = getRecordedPeriodEnd(cycle, insights);
     if (isWithinIso(dateIso, start, end)) {
@@ -130,18 +96,17 @@ export function getCycleDayKind(date: Date, cycles: CycleRecord[], insights?: Cy
     }
   }
 
-  const cycleLength = insights?.averageCycleLength ?? cycles[0]?.cycleLength ?? 28;
-  const predictedStart = insights?.estimatedPeriodStartDate ?? insights?.estimatedNextStartDate;
-  const predictedEnd = insights?.estimatedPeriodEndDate ?? insights?.estimatedNextEndDate;
+  const predictedStart = insights?.predictedStartEarliest
+    ?? insights?.estimatedPeriodStartDate
+    ?? insights?.estimatedNextStartDate;
+  const predictedEnd = insights?.predictedStartLatest
+    ? addDays(insights.predictedStartLatest, Math.max(1, Math.round(insights.averagePeriodLength ?? 5)) - 1)
+    : insights?.estimatedPeriodEndDate ?? insights?.estimatedNextEndDate;
 
   const ovulationDate = insights?.estimatedOvulationDate?.slice(0, 10);
   if (ovulationDate && dateIso === ovulationDate) return 'ovulation';
-  const projectedOvulationDate = projectIsoAround(dateIso, ovulationDate, cycleLength);
-  if (projectedOvulationDate && dateIso === projectedOvulationDate) return 'ovulation';
 
   if (isWithinIso(dateIso, insights?.fertileWindowStartDate, insights?.fertileWindowEndDate)) return 'fertile';
-  const projectedFertile = getProjectedWindow(dateIso, insights?.fertileWindowStartDate, insights?.fertileWindowEndDate, cycleLength);
-  if (projectedFertile && isWithinIso(dateIso, projectedFertile.start, projectedFertile.end)) return 'fertile';
 
   if (isWithinIso(dateIso, predictedStart, predictedEnd)) {
     const kind = insights?.periodStatus === 'DELAYED' ? 'delayed' : 'predicted';
@@ -150,14 +115,6 @@ export function getCycleDayKind(date: Date, cycles: CycleRecord[], insights?: Cy
     }
     return kind;
   }
-  const projectedPeriod = getProjectedWindow(dateIso, predictedStart, predictedEnd, cycleLength);
-  if (projectedPeriod && isWithinIso(dateIso, projectedPeriod.start, projectedPeriod.end)) {
-    if (isCloseToRecorded(dateIso, cycles, insights)) {
-      return null;
-    }
-    return 'predicted';
-  }
-
   return null;
 }
 
@@ -171,7 +128,7 @@ export function getCalendarRange(anchor: Date, weeks = 3) {
 
 export function getCalendarAnchor(insights?: CycleInsights | null, cycles: CycleRecord[] = []) {
   const today = new Date();
-  if (insights?.periodStatus === 'CONFIRMED') {
+  if (insights?.periodStatus === 'CONFIRMED' || insights?.periodStatus === 'NEEDS_CONFIRMATION') {
     const confirmedAnchor = fromIsoDate(insights.lastRecordedStartDate ?? cycles[0]?.startDate);
     if (confirmedAnchor) return confirmedAnchor;
   }

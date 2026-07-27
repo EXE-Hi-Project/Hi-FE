@@ -19,6 +19,12 @@ interface ProfileForm {
   birthDate: string;
   height: number | '';
   weight: number | '';
+  irregularCycle: boolean;
+  pregnant: boolean;
+  postpartum: boolean;
+  breastfeeding: boolean;
+  hormonalContraception: boolean;
+  perimenopause: boolean;
 }
 
 interface ProfileResponse {
@@ -90,6 +96,12 @@ export default function SettingsPage() {
       birthDate: user?.birthDate?.slice(0, 10) ?? '',
       height: user?.height ?? '',
       weight: user?.weight ?? '',
+      irregularCycle: user?.irregularCycle ?? false,
+      pregnant: user?.pregnant ?? false,
+      postpartum: user?.postpartum ?? false,
+      breastfeeding: user?.breastfeeding ?? false,
+      hormonalContraception: user?.hormonalContraception ?? false,
+      perimenopause: user?.perimenopause ?? false,
     },
   });
 
@@ -101,6 +113,16 @@ export default function SettingsPage() {
         height: normalizeNumber(values.height),
         weight: normalizeNumber(values.weight),
       };
+      if (!isMale) {
+        Object.assign(payload, {
+          irregularCycle: values.irregularCycle,
+          pregnant: values.pregnant,
+          postpartum: values.postpartum,
+          breastfeeding: values.breastfeeding,
+          hormonalContraception: values.hormonalContraception,
+          perimenopause: values.perimenopause,
+        });
+      }
       const { data } = await api.put<ProfileResponse>('/users/profile', payload);
       return unwrapUser(data);
     },
@@ -299,6 +321,33 @@ export default function SettingsPage() {
                 <Input label="Chiều cao (cm)" type="number" className={accent.focus} {...register('height', { valueAsNumber: true })} />
                 <Input label="Cân nặng (kg)" type="number" className={accent.focus} {...register('weight', { valueAsNumber: true })} />
               </div>
+              {!isMale && (
+                <fieldset className="rounded-2xl border border-rose-100 bg-rose-50/40 p-4">
+                  <legend className="px-1 text-sm font-extrabold text-slate-800">Bối cảnh ảnh hưởng dự đoán chu kỳ</legend>
+                  <p className="mb-3 mt-1 text-xs leading-relaxed text-slate-500">
+                    Chọn đúng để Hi tạm ẩn dự đoán rụng trứng khi phương pháp theo lịch không phù hợp.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      ['irregularCycle', 'Chu kỳ không đều'],
+                      ['pregnant', 'Đang mang thai'],
+                      ['postpartum', 'Đang trong giai đoạn sau sinh'],
+                      ['breastfeeding', 'Đang cho con bú'],
+                      ['hormonalContraception', 'Đang dùng biện pháp tránh thai nội tiết'],
+                      ['perimenopause', 'Đang ở giai đoạn tiền mãn kinh'],
+                    ].map(([field, label]) => (
+                      <label key={field} className="flex items-start gap-2 rounded-xl bg-white/80 px-3 py-2.5 text-xs font-semibold text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4 rounded border-rose-200 text-rose-500 focus:ring-rose-200"
+                          {...register(field as keyof ProfileForm)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
               <div className={`rounded-2xl border ${accent.border} bg-gradient-to-br ${accent.softGradient} p-4`}>
                 <div className="flex items-start gap-3">
                   <span className={`material-symbols-outlined mt-0.5 ${accent.text}`}>privacy_tip</span>

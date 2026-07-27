@@ -132,7 +132,6 @@ export default function FemaleDashboardPage() {
   const confirmedPeriodDay = insights?.confirmedPeriodDay ?? null;
   const phase = insights?.estimatedPhase ?? '—';
   const estimatedPeriodStartDate = insights?.estimatedPeriodStartDate ?? insights?.estimatedNextStartDate;
-  const estimatedPeriodEndDate = insights?.estimatedPeriodEndDate ?? insights?.estimatedNextEndDate;
   const fallbackDaysUntilEstimatedPeriod = getLocalCalendarDayDifference(estimatedPeriodStartDate);
   const rawPeriodStatus = insights?.periodStatus ?? 'UPCOMING';
   const periodStatus = rawPeriodStatus === 'PREDICTED' && fallbackDaysUntilEstimatedPeriod !== null && fallbackDaysUntilEstimatedPeriod <= 0
@@ -146,11 +145,12 @@ export default function FemaleDashboardPage() {
   const periodDelayDays = periodStatus === 'DELAYED'
     ? insights?.periodDelayDays ?? Math.max(-(fallbackDaysUntilEstimatedPeriod ?? 0), 0)
     : 0;
-  const fertilityLabel = insights?.fertilityStatus === 'HIGH'
-    ? 'Cao'
-    : insights?.fertilityStatus === 'LOW'
-      ? 'Thấp'
-      : 'Chưa đủ dữ liệu';
+  const fertilityLabel = insights?.fertilityStatus === 'ESTIMATED_WINDOW'
+    ? 'Đang trong cửa sổ ước tính'
+    : insights?.fertilityStatus === 'OUTSIDE_ESTIMATED_WINDOW'
+      ? 'Ngoài cửa sổ ước tính, vẫn có thể mang thai'
+      : 'Không thể ước tính đáng tin cậy';
+  const periodIsActive = periodStatus === 'CONFIRMED' || periodStatus === 'NEEDS_CONFIRMATION';
   const cycleLen       = Math.round(insights?.averageCycleLength ?? latestCycle?.cycleLength ?? 28);
   const periodLen      = Math.round(insights?.averagePeriodLength ?? latestCycle?.periodLength ?? 5);
   const confidenceLabel = insights?.predictionConfidence === 'HIGH'
@@ -161,7 +161,7 @@ export default function FemaleDashboardPage() {
   const circumference = 251.2;
   const ringProgress = !latestCycle
     ? 0
-    : periodStatus === 'CONFIRMED'
+    : periodIsActive
       ? Math.min((confirmedPeriodDay ?? 0) / Math.max(periodLen, 1), 1)
       : periodStatus === 'UPCOMING'
         ? Math.min(Math.max((cycleLen - (daysUntilEstimatedPeriod ?? cycleLen)) / Math.max(cycleLen, 1), 0), 1)
@@ -169,7 +169,7 @@ export default function FemaleDashboardPage() {
   const dashoffset = circumference - ringProgress * circumference;
   const ringValue = !latestCycle
     ? '--'
-    : periodStatus === 'CONFIRMED'
+    : periodIsActive
       ? confirmedPeriodDay ?? '--'
       : periodStatus === 'UPCOMING'
         ? daysUntilEstimatedPeriod ?? '--'
@@ -178,7 +178,7 @@ export default function FemaleDashboardPage() {
           : periodDelayDays;
   const ringEyebrow = !latestCycle
     ? 'Chưa có dữ liệu'
-    : periodStatus === 'CONFIRMED'
+    : periodIsActive
       ? 'Ngày kinh nguyệt'
       : periodStatus === 'UPCOMING'
         ? 'Còn'
@@ -187,7 +187,7 @@ export default function FemaleDashboardPage() {
           : 'Đã trễ';
   const ringCaption = !latestCycle
     ? 'Thêm kỳ gần nhất'
-    : periodStatus === 'CONFIRMED'
+    : periodIsActive
       ? 'Đã ghi nhận'
       : periodStatus === 'UPCOMING'
         ? 'ngày nữa tới kỳ'
@@ -330,8 +330,8 @@ export default function FemaleDashboardPage() {
                             <span className="material-symbols-outlined text-[18px]">event_upcoming</span>
                             <p className="text-[10px] font-black uppercase tracking-wide">Kỳ tiếp theo</p>
                           </div>
-                          <p className="mt-2 text-base font-extrabold text-slate-800">{formatDateRange(estimatedPeriodStartDate, estimatedPeriodEndDate)}</p>
-                          <p className="mt-1 text-[11px] font-bold text-rose-400">Ước tính</p>
+                          <p className="mt-2 text-base font-extrabold text-slate-800">{formatDateRange(insights?.predictedStartEarliest ?? estimatedPeriodStartDate, insights?.predictedStartLatest ?? estimatedPeriodStartDate)}</p>
+                          <p className="mt-1 text-[11px] font-bold text-rose-400">Khoảng ngày bắt đầu ước tính</p>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -352,6 +352,8 @@ export default function FemaleDashboardPage() {
                         ? `Kỳ tiếp theo dự kiến sau ${daysUntilEstimatedPeriod ?? '--'} ngày. Giai đoạn hiện tại: ước tính ${phase.toLowerCase()}.`
                         : periodStatus === 'CONFIRMED'
                           ? `Đã ghi nhận ngày ${confirmedPeriodDay} của kỳ kinh hiện tại.`
+                          : periodStatus === 'NEEDS_CONFIRMATION'
+                            ? 'Đã có ít nhất 2 ngày chưa ghi lượng kinh. Hãy xác nhận kết thúc hoặc tiếp tục ghi nếu vẫn còn kinh.'
                           : periodStatus === 'PREDICTED'
                             ? 'Bạn đang ở trong cửa sổ kỳ kinh dự kiến. Chỉ xác nhận khi kỳ kinh thực sự bắt đầu.'
                             : 'Kỳ kinh chưa được ghi nhận sau ngày dự kiến. Hãy cập nhật khi kỳ kinh bắt đầu.'}
@@ -360,8 +362,8 @@ export default function FemaleDashboardPage() {
                   </div>
 
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <button onClick={() => openSymptoms(periodStatus === 'CONFIRMED' ? 'default' : 'periodStart')} className="hi-btn-primary rounded-xl px-4 py-3 text-sm font-bold">
-                      {periodStatus === 'CONFIRMED' ? 'Ghi triệu chứng hôm nay' : 'Bắt đầu kỳ hôm nay'}
+                    <button onClick={() => openSymptoms(periodIsActive ? 'default' : 'periodStart')} className="hi-btn-primary rounded-xl px-4 py-3 text-sm font-bold">
+                      {periodIsActive ? 'Ghi hoặc xác nhận kỳ hiện tại' : 'Bắt đầu kỳ hôm nay'}
                     </button>
                     <button onClick={() => openCycleHistory()} className="hi-btn-secondary rounded-xl px-4 py-3 text-sm font-bold">
                       Thêm lịch sử
@@ -523,7 +525,11 @@ export default function FemaleDashboardPage() {
                 </div>
                 <div className="rounded-3xl bg-gradient-to-br from-violet-50 to-white p-4">
                   <p className="text-[10px] font-black uppercase tracking-wider text-violet-500">Rụng trứng ước tính</p>
-                  <p className="mt-2 text-xl font-black text-slate-900">{formatShortDate(insights?.estimatedOvulationDate)}</p>
+                  <p className="mt-2 text-xl font-black text-slate-900">
+                    {insights?.fertilityEstimateAvailable
+                      ? formatShortDate(insights.estimatedOvulationDate)
+                      : 'Chưa đủ dữ liệu'}
+                  </p>
                 </div>
                 <div className="rounded-3xl bg-gradient-to-br from-amber-50 to-white p-4">
                   <p className="text-[10px] font-black uppercase tracking-wider text-amber-500">Xu hướng chu kỳ</p>
@@ -553,7 +559,11 @@ export default function FemaleDashboardPage() {
                   />
                   <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
                     <p className="text-[10px] font-black uppercase tracking-wider text-violet-500">Rụng trứng ước tính</p>
-                    <p className="mt-2 text-xl font-black text-slate-900">{formatShortDate(insights?.estimatedOvulationDate)}</p>
+                    <p className="mt-2 text-xl font-black text-slate-900">
+                      {insights?.fertilityEstimateAvailable
+                        ? formatShortDate(insights.estimatedOvulationDate)
+                        : 'Chưa đủ dữ liệu'}
+                    </p>
                   </div>
                 </div>
               )}

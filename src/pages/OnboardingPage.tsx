@@ -78,6 +78,11 @@ export default function OnboardingPage() {
   const [cycleLength, setCycleLength] = useState(28);
   const [periodLength, setPeriodLength] = useState(5);
   const [irregularCycle, setIrregularCycle] = useState(false);
+  const [pregnant, setPregnant] = useState(false);
+  const [postpartum, setPostpartum] = useState(false);
+  const [breastfeeding, setBreastfeeding] = useState(false);
+  const [hormonalContraception, setHormonalContraception] = useState(false);
+  const [perimenopause, setPerimenopause] = useState(false);
   const [periodReminder, setPeriodReminder] = useState(true);
   const [reminderDaysBefore, setReminderDaysBefore] = useState(3);
   const [partnerNotifications, setPartnerNotifications] = useState(true);
@@ -148,6 +153,11 @@ export default function OnboardingPage() {
         payload.lastPeriodDate = selectedDate || undefined;
         payload.lastPeriodEndDate = endDate || undefined;
         payload.irregularCycle = irregularCycle;
+        payload.pregnant = pregnant;
+        payload.postpartum = postpartum;
+        payload.breastfeeding = breastfeeding;
+        payload.hormonalContraception = hormonalContraception;
+        payload.perimenopause = perimenopause;
         payload.periodReminder = periodReminder;
         payload.reminderDaysBefore = reminderDaysBefore;
       } else if (gender === 'male') {
@@ -536,6 +546,32 @@ export default function OnboardingPage() {
                       />
                     </div>
                   </button>
+
+                  <div className="mt-3 rounded-2xl border border-violet-100 bg-white/80 p-3">
+                    <p className="text-xs font-bold text-gray-800">Bối cảnh sức khỏe hiện tại</p>
+                    <p className="mt-1 text-[10px] leading-snug text-gray-500">
+                      Những lựa chọn này giúp Hi không hiển thị dự đoán rụng trứng thiếu phù hợp.
+                    </p>
+                    <div className="mt-2 grid gap-2">
+                      {[
+                        { label: 'Đang mang thai', value: pregnant, setValue: setPregnant },
+                        { label: 'Đang trong giai đoạn sau sinh', value: postpartum, setValue: setPostpartum },
+                        { label: 'Đang cho con bú', value: breastfeeding, setValue: setBreastfeeding },
+                        { label: 'Đang dùng tránh thai nội tiết', value: hormonalContraception, setValue: setHormonalContraception },
+                        { label: 'Đang ở giai đoạn tiền mãn kinh', value: perimenopause, setValue: setPerimenopause },
+                      ].map((item) => (
+                        <label key={item.label} className="flex cursor-pointer items-center gap-2 rounded-xl bg-violet-50/60 px-3 py-2 text-[11px] font-semibold text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={item.value}
+                            onChange={(event) => item.setValue(event.target.checked)}
+                            className="h-4 w-4 rounded border-violet-200 text-violet-500 focus:ring-violet-200"
+                          />
+                          {item.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
                   <button
                     onClick={() => setPeriodReminder(v => !v)}

@@ -32,6 +32,11 @@ export interface User {
   lastPeriodDate?: string;
   lastPeriodEndDate?: string;
   irregularCycle?: boolean;
+  pregnant?: boolean;
+  postpartum?: boolean;
+  breastfeeding?: boolean;
+  hormonalContraception?: boolean;
+  perimenopause?: boolean;
   aiPersonality?: AiPersonality;
   aiTone?: AiTone;
   periodReminder?: boolean;
@@ -82,8 +87,9 @@ export interface CycleRecord {
   cycleLength: number;
   periodLength: number;
   notes?: string;
-  status?: 'ONGOING' | 'COMPLETED' | null;
+  status?: 'ONGOING' | 'NEEDS_CONFIRMATION' | 'COMPLETED' | null;
   lastBleedingDate?: string | null;
+  endDateEstimated?: boolean;
   isIgnored?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -94,7 +100,7 @@ export interface CreateCycleRecordDto {
   endDate?: string | null;
   cycleLength?: number;
   periodLength?: number;
-  status?: 'ONGOING' | 'COMPLETED';
+  status?: 'ONGOING' | 'NEEDS_CONFIRMATION' | 'COMPLETED';
   isIgnored?: boolean;
 }
 
@@ -133,6 +139,8 @@ export interface CycleInsights {
   estimatedCurrentCycleStartDate?: string | null;
   estimatedPeriodStartDate?: string | null;
   estimatedPeriodEndDate?: string | null;
+  predictedStartEarliest?: string | null;
+  predictedStartLatest?: string | null;
   estimatedNextStartDate?: string | null;
   estimatedNextEndDate?: string | null;
   estimatedOvulationDate?: string | null;
@@ -140,7 +148,7 @@ export interface CycleInsights {
   fertileWindowEndDate?: string | null;
   currentCycleDay?: number | null;
   currentPhase?: string | null;
-  periodStatus?: 'CONFIRMED' | 'UPCOMING' | 'PREDICTED' | 'DELAYED';
+  periodStatus?: 'CONFIRMED' | 'NEEDS_CONFIRMATION' | 'UPCOMING' | 'PREDICTED' | 'DELAYED';
   periodOngoing?: boolean;
   confirmedPeriodDay?: number | null;
   estimatedCycleDay?: number | null;
@@ -148,13 +156,18 @@ export interface CycleInsights {
   periodDelayDays?: number | null;
   daysUntilEstimatedPeriod?: number | null;
   estimatedPeriodDay?: number | null;
-  fertilityStatus?: 'UNKNOWN' | 'LOW' | 'HIGH';
+  fertilityStatus?: 'UNKNOWN' | 'ESTIMATED_WINDOW' | 'OUTSIDE_ESTIMATED_WINDOW';
   regularityStatus?: 'UNKNOWN' | 'REGULAR' | 'NORMAL' | 'IRREGULAR';
   regularityScore?: number;
   regularityLabel?: string;
   regularityReasons?: string[];
   cycleTrendPoints?: CycleTrendPoint[];
   predictionConfidence?: 'LOW' | 'MEDIUM' | 'HIGH' | null;
+  predictionBasis?: string;
+  dataQualityIssues?: string[];
+  cycleCompleteness?: number;
+  fertilityEstimateAvailable?: boolean;
+  algorithmVersion?: string;
   hasOutliers: boolean;
   warnings: string[];
   symptomImpactScore?: number;

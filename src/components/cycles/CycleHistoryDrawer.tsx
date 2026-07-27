@@ -52,14 +52,18 @@ function includesDate(range: DateRange, date: string) {
 }
 
 function rangesOverlap(left: DateRange, right: DateRange) {
-  const leftEnd = left.endDate || toIsoDate(new Date(fromIsoDate(left.startDate).getTime() + 4 * 86_400_000));
-  const rightEnd = right.endDate || toIsoDate(new Date(fromIsoDate(right.startDate).getTime() + 4 * 86_400_000));
+  const today = toIsoDate(new Date());
+  const leftEnd = left.endDate || today;
+  const rightEnd = right.endDate || today;
   return left.startDate <= rightEnd && right.startDate <= leftEnd;
 }
 
 function rangeLength(range: DateRange) {
-  const end = range.endDate || toIsoDate(new Date(fromIsoDate(range.startDate).getTime() + 4 * 86_400_000));
-  return Math.round((fromIsoDate(end).getTime() - fromIsoDate(range.startDate).getTime()) / 86_400_000) + 1;
+  const end = range.endDate || toIsoDate(new Date());
+  return Math.max(
+    1,
+    Math.round((fromIsoDate(end).getTime() - fromIsoDate(range.startDate).getTime()) / 86_400_000) + 1,
+  );
 }
 
 function getMonthGrid(month: Date) {
@@ -137,7 +141,7 @@ export default function CycleHistoryDrawer({
   );
 
   const isOngoing = useMemo(() => {
-    return editingRecord?.status === 'ONGOING'
+    return editingRecord?.status === 'ONGOING' || editingRecord?.status === 'NEEDS_CONFIRMATION'
       || (!!editingRecord && !editingRecord.endDate && editingRecord._id === cycles[0]?._id);
   }, [editingRecord, cycles]);
 
@@ -154,7 +158,6 @@ export default function CycleHistoryDrawer({
 
   const validateRange = (range: DateRange) => {
     if (range.endDate && range.endDate > todayIso) return 'Không thể chọn ngày tương lai.';
-    if (range.endDate && rangeLength(range) > 30) return 'Một kỳ kinh không thể dài hơn 30 ngày.';
     if ([...comparableStoredRanges, ...pendingRanges].some((item) => rangesOverlap(item, range))) {
       return 'Khoảng ngày này đang trùng với một kỳ đã ghi nhận.';
     }

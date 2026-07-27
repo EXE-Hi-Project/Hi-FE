@@ -55,6 +55,11 @@ export interface User {
   lastPeriodDate?: string;
   lastPeriodEndDate?: string;
   irregularCycle?: boolean;
+  pregnant?: boolean;
+  postpartum?: boolean;
+  breastfeeding?: boolean;
+  hormonalContraception?: boolean;
+  perimenopause?: boolean;
   aiPersonality?: AiPersonality;
   aiTone?: AiTone;
   periodReminder?: boolean;

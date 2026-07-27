@@ -56,6 +56,14 @@ function ringCopy(insights?: CycleInsights | null) {
       color: '#f9a8d4',
     };
   }
+  if (status === 'NEEDS_CONFIRMATION') {
+    return {
+      value: insights?.confirmedPeriodDay ?? '--',
+      eyebrow: 'Kỳ hiện tại',
+      caption: 'đang chờ xác nhận kết thúc',
+      color: '#f59e0b',
+    };
+  }
   if (status === 'DELAYED') {
     return {
       value: insights?.periodDelayDays ?? '--',
@@ -145,7 +153,11 @@ export default function MaleDashboardPage() {
   const partnerName = partner?.name ?? 'Người ấy';
   const partnerAvatar = partner?.avatar?.trim();
   const partnerInitial = partnerName.trim().charAt(0).toUpperCase() || 'N';
-  const fertilityLabel = insights?.fertilityStatus === 'HIGH' ? 'Cao' : insights?.fertilityStatus === 'LOW' ? 'Thấp' : 'Chưa đủ dữ liệu';
+  const fertilityLabel = insights?.fertilityStatus === 'ESTIMATED_WINDOW'
+    ? 'Trong cửa sổ ước tính'
+    : insights?.fertilityStatus === 'OUTSIDE_ESTIMATED_WINDOW'
+      ? 'Ngoài cửa sổ ước tính'
+      : 'Không thể ước tính';
   const confidenceLabel = insights?.predictionConfidence === 'HIGH' ? 'Cao' : insights?.predictionConfidence === 'MEDIUM' ? 'Trung bình' : 'Đang học dữ liệu';
   const latestMoodValue = partnerQuery.data?.latestMood;
   const latestMood = typeof latestMoodValue === 'object' && latestMoodValue
@@ -251,7 +263,9 @@ export default function MaleDashboardPage() {
                           Tin cậy: {confidenceLabel}
                         </span>
                         <span className="rounded-full bg-sky-50 px-4 py-2 text-xs font-black text-sky-700 shadow-sm">
-                          Rụng trứng ước tính: {formatShortDate(insights?.estimatedOvulationDate)}
+                          Rụng trứng ước tính: {insights?.fertilityEstimateAvailable
+                            ? formatShortDate(insights.estimatedOvulationDate)
+                            : 'Chưa đủ dữ liệu'}
                         </span>
                         <span className="rounded-full bg-violet-50 px-4 py-2 text-xs font-black text-violet-700 shadow-sm">
                           Khả năng thụ thai ước tính: {fertilityLabel}
