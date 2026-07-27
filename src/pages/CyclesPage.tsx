@@ -52,9 +52,10 @@ function addIsoDays(value: string, amount: number) {
 
 function buildPeriodDates(cycle: CycleRecord | null, insights?: CycleInsights | null) {
   if (!cycle) return [];
-  const hasEndDate = !!cycle.endDate;
-  const periodLen = hasEndDate
-    ? (cycle.periodLength || 5)
+  const isOngoing = cycle.status === 'ONGOING'
+    || (insights?.periodOngoing && insights.lastRecordedStartDate?.slice(0, 10) === cycle.startDate.slice(0, 10));
+  const periodLen = cycle.endDate || isOngoing
+    ? (cycle.periodLength || (isOngoing ? 1 : 5))
     : Math.round(insights?.averagePeriodLength || cycle.periodLength || 5);
   const periodLength = Math.max(1, Math.min(periodLen, 30));
   return Array.from({ length: periodLength }, (_, index) => addIsoDays(cycle.startDate, index));
@@ -356,9 +357,10 @@ export default function CyclesPage() {
                           <div className="space-y-2.5">
                             {PHASES.map((phase, index) => {
                               const cycleLen = activeCycle.cycleLength || 28;
-                              const hasEndDate = !!activeCycle.endDate;
-                              const periodLen = hasEndDate
-                                ? (activeCycle.periodLength || 5)
+                              const isOngoing = activeCycle.status === 'ONGOING'
+                                || (insights?.periodOngoing && insights.lastRecordedStartDate?.slice(0, 10) === activeCycle.startDate.slice(0, 10));
+                              const periodLen = activeCycle.endDate || isOngoing
+                                ? (activeCycle.periodLength || (isOngoing ? 1 : 5))
                                 : Math.round(insights?.averagePeriodLength || activeCycle.periodLength || 5);
                               const ovulationDay = Math.max(periodLen + 1, cycleLen - 14);
                               const ranges = [
@@ -391,7 +393,9 @@ export default function CyclesPage() {
                           <div className="p-3.5 rounded-2xl" style={{ background: '#fff5f5' }}>
                             <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wide mb-0.5">Kinh nguyệt</p>
                             <p className="text-2xl font-extrabold text-slate-900">
-                              {activeCycle.endDate
+                              {activeCycle.status === 'ONGOING' || (insights?.periodOngoing && activeCycle._id === cycles[0]?._id)
+                                ? `Đang diễn ra: ${activeCycle.periodLength || 1} ngày`
+                                : activeCycle.endDate
                                 ? `${activeCycle.periodLength || 5} ngày`
                                 : `Dự kiến: ${Math.round(insights?.averagePeriodLength || activeCycle.periodLength || 5)} ngày`}
                             </p>

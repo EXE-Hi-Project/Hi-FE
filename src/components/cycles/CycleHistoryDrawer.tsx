@@ -137,7 +137,8 @@ export default function CycleHistoryDrawer({
   );
 
   const isOngoing = useMemo(() => {
-    return editingRecord?._id === cycles[0]?._id;
+    return editingRecord?.status === 'ONGOING'
+      || (!!editingRecord && !editingRecord.endDate && editingRecord._id === cycles[0]?._id);
   }, [editingRecord, cycles]);
 
   const predictedPeriodLength = useMemo(() => {
@@ -197,10 +198,12 @@ export default function CycleHistoryDrawer({
         const range: any = { startDate: draftStart };
         if (draftEnd) {
           range.endDate = draftEnd;
+          range.status = 'COMPLETED';
           const validationError = validateRange({ startDate: draftStart, endDate: draftEnd });
           if (validationError) throw new Error(validationError);
         } else {
           range.endDate = null;
+          range.status = 'ONGOING';
         }
         await api.put(`/cycle-records/${editingRecord._id}`, range);
       } else {

@@ -2,15 +2,6 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const PUBLIC_ROUTES = ['/', '/help', '/terms', '/privacy', '/kien-thuc'];
-const MOTION_EXCLUSIONS = [
-  '[role="dialog"]',
-  '[data-no-scroll-motion]',
-  '.maplibregl-map',
-  '.overflow-auto',
-  '.overflow-y-auto',
-  'table',
-];
-
 function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some((route) => route === '/' ? pathname === route : pathname.startsWith(route));
 }
@@ -18,14 +9,7 @@ function isPublicRoute(pathname: string) {
 function findRouteSurface() {
   const root = document.getElementById('root');
   if (!root) return null;
-  const candidates = root.querySelectorAll<HTMLElement>(
-    '[data-motion-page], .lp-root, .auth-shell, main, div.min-h-screen',
-  );
-  return Array.from(candidates).find((element) => !element.closest('[role="dialog"]')) ?? null;
-}
-
-function isSafeRevealTarget(element: HTMLElement) {
-  return !MOTION_EXCLUSIONS.some((selector) => element.matches(selector) || element.closest(selector));
+  return root.querySelector<HTMLElement>('[data-motion-page]');
 }
 
 export default function RouteMotionEffects() {
@@ -45,6 +29,7 @@ export default function RouteMotionEffects() {
 
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const metaBrowser = document.documentElement.classList.contains('meta-in-app-browser');
+      const publicRoute = isPublicRoute(pathname);
       const { animate } = await import('motion');
       if (disposed) return;
 
@@ -52,8 +37,10 @@ export default function RouteMotionEffects() {
         surface,
         reduceMotion || metaBrowser
           ? { opacity: [0.92, 1] }
-          : { opacity: [0.9, 1], transform: ['translateY(8px)', 'translateY(0px)'] },
-        { duration: reduceMotion ? 0.01 : 0.28, ease: [0.25, 1, 0.5, 1] },
+          : publicRoute
+            ? { opacity: [0.9, 1], transform: ['translateY(8px)', 'translateY(0px)'] }
+            : { opacity: [0.92, 1] },
+        { duration: reduceMotion ? 0.12 : 0.2, ease: [0.25, 1, 0.5, 1] },
       );
 
       if (reduceMotion || metaBrowser) {
@@ -73,13 +60,9 @@ export default function RouteMotionEffects() {
       const ScrollTrigger = scrollTriggerModule.ScrollTrigger;
       gsap.registerPlugin(ScrollTrigger);
 
-      const publicRoute = isPublicRoute(pathname);
-      const selector = publicRoute
-        ? 'section, article > header, [data-motion-reveal], #features, #reviews, #pricing'
-        : ':scope > section, :scope > div > section, [data-motion-reveal]';
-      const targets = Array.from(surface.querySelectorAll<HTMLElement>(selector))
-        .filter(isSafeRevealTarget)
-        .slice(0, publicRoute ? 32 : 18);
+      const targets = publicRoute
+        ? Array.from(surface.querySelectorAll<HTMLElement>('[data-motion-reveal]')).slice(0, 24)
+        : [];
 
       const context = gsap.context(() => {
         const initialTargets = targets.filter((element) => element.getBoundingClientRect().top < window.innerHeight * 0.9);
