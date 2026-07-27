@@ -207,6 +207,7 @@ export default function App() {
       <UserGuideProvider>
         <SeoHead />
         <RouteMotionEffects />
+        <div data-motion-page>
         <Suspense fallback={<RouteFallback />}>
         <Routes>
       <Route path="/" element={<HomeRoute />} />
@@ -252,6 +253,7 @@ export default function App() {
       <Route path="*" element={<NotFoundPage />} />
         </Routes>
         </Suspense>
+        </div>
         <FloatingHiChatGate />
       </UserGuideProvider>
     </MaintenanceGate>

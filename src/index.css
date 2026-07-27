@@ -326,20 +326,43 @@ html.meta-in-app-browser .auth-glass-panel {
 }
 
 .animate-anniversary-sparkle {
-  animation: anniversary-sparkle 2s ease-in-out infinite;
+  animation: anniversary-sparkle 620ms ease-out 1;
 }
 
 .animate-float {
-  animation: anniversary-float 3s ease-in-out infinite;
+  animation: anniversary-float 620ms ease-out 1;
 }
 
 .animate-anniversary-glow {
-  animation: anniversary-glow 2.5s ease-in-out infinite;
+  animation: anniversary-glow 620ms ease-out 1;
 }
 
 .animate-anniversary-confetti {
-  background-size: 200% 200%;
-  animation: anniversary-confetti 6s linear infinite;
+  animation: none;
+}
+
+/* Semantic micro-interaction baseline for legacy user surfaces.
+   New components should use motionTransition; these rules keep native DOM
+   controls consistent while they are migrated to shared primitives. */
+:where(button, [role='button'], a, input, textarea, select, [role='switch'], [role='tab']) {
+  transition-property: transform, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+:where(button, [role='button'], a, [role='switch'], [role='tab']):active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+:where(input, textarea, select):focus-visible {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+:where(button, [role='button'], input, textarea, select):disabled,
+:where([aria-busy='true']) {
+  opacity: 0.58;
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

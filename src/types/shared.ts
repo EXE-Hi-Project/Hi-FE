@@ -78,10 +78,12 @@ export interface CycleRecord {
   _id: number;
   userId: string;
   startDate: string;
-  endDate?: string;
+  endDate?: string | null;
   cycleLength: number;
   periodLength: number;
   notes?: string;
+  status?: 'ONGOING' | 'COMPLETED' | null;
+  lastBleedingDate?: string | null;
   isIgnored?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -89,9 +91,10 @@ export interface CycleRecord {
 
 export interface CreateCycleRecordDto {
   startDate: string;
-  endDate?: string;
+  endDate?: string | null;
   cycleLength?: number;
   periodLength?: number;
+  status?: 'ONGOING' | 'COMPLETED';
   isIgnored?: boolean;
 }
 
@@ -126,6 +129,7 @@ export interface CycleInsights {
   lastStartDate?: string | null;
   lastRecordedStartDate?: string | null;
   lastRecordedEndDate?: string | null;
+  lastBleedingDate?: string | null;
   estimatedCurrentCycleStartDate?: string | null;
   estimatedPeriodStartDate?: string | null;
   estimatedPeriodEndDate?: string | null;
@@ -137,6 +141,7 @@ export interface CycleInsights {
   currentCycleDay?: number | null;
   currentPhase?: string | null;
   periodStatus?: 'CONFIRMED' | 'UPCOMING' | 'PREDICTED' | 'DELAYED';
+  periodOngoing?: boolean;
   confirmedPeriodDay?: number | null;
   estimatedCycleDay?: number | null;
   estimatedPhase?: string | null;
@@ -168,6 +173,7 @@ export type FlowIntensity = 'NONE' | 'LIGHT' | 'MEDIUM' | 'HEAVY';
 export interface UpsertDailyLogDto {
   flowIntensity?: FlowIntensity;
   confirmPeriodStart?: boolean;
+  confirmPeriodEnd?: boolean;
   hasClots?: boolean;
   moodScore?: number;
   notes?: string;

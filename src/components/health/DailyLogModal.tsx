@@ -104,6 +104,10 @@ function addDays(value: string, amount: number) {
   return toIsoDate(new Date(date.getFullYear(), date.getMonth(), date.getDate() + amount));
 }
 
+function daysInclusive(start: string, end: string) {
+  return Math.floor((fromIsoDate(end).getTime() - fromIsoDate(start).getTime()) / 86_400_000) + 1;
+}
+
 function formatDate(value: string) {
   return fromIsoDate(value).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' });
 }
@@ -130,24 +134,42 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
   const [search, setSearch] = useState('');
 
   const [confirmPeriodStart, setConfirmPeriodStart] = useState(false);
+  const [confirmPeriodEnd, setConfirmPeriodEnd] = useState(false);
 
   const { data: cyclesData } = useQuery<{ cycleRecords: CycleRecord[] }>({
-    queryKey: ['cycles-for-log-check', selectedDate],
-    queryFn: () => api.get('/cycle-records', { params: { from: selectedDate, to: selectedDate } }).then(({ data }) => data),
+    queryKey: ['cycles-for-log-check'],
+    queryFn: () => api.get('/cycle-records').then(({ data }) => data),
     enabled: open,
   });
 
+  const activePeriod = useMemo(() => {
+    return cyclesData?.cycleRecords?.find((cycle) => {
+      if (cycle.status === 'ONGOING') return true;
+      if (cycle.status === 'COMPLETED' || cycle.endDate) return false;
+      const start = cycle.startDate.slice(0, 10);
+      return start <= today && daysInclusive(start, today) <= 30;
+    }) ?? null;
+  }, [cyclesData, today]);
+  const selectedDateBelongsToActivePeriod = useMemo(() => {
+    if (!activePeriod) return false;
+    const start = activePeriod.startDate.slice(0, 10);
+    return selectedDate >= start && daysInclusive(start, selectedDate) <= 30;
+  }, [activePeriod, selectedDate]);
+  const canEndActivePeriod = !!activePeriod && selectedDate >= activePeriod.startDate.slice(0, 10);
   const isExistingPeriodStart = useMemo(() => {
     return !!cyclesData?.cycleRecords?.some(c => c.startDate.slice(0, 10) === selectedDate);
   }, [cyclesData, selectedDate]);
 
   useEffect(() => {
-    if (mode === 'periodStart') {
+    if (activePeriod) {
+      setConfirmPeriodStart(false);
+    } else if (mode === 'periodStart') {
       setConfirmPeriodStart(true);
     } else {
       setConfirmPeriodStart(isExistingPeriodStart);
     }
-  }, [selectedDate, isExistingPeriodStart, mode]);
+    setConfirmPeriodEnd(false);
+  }, [activePeriod, selectedDate, isExistingPeriodStart, mode]);
 
   useEffect(() => {
     if (open) {
@@ -259,13 +281,17 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
       if (confirmPeriodStart && flowIntensity === 'NONE') {
         throw new Error('Hãy chọn lượng kinh để xác nhận kỳ kinh bắt đầu.');
       }
-      if (!confirmPeriodStart && flowIntensity === 'NONE' && !hasClots && selectedSymptoms.size === 0 && !notes.trim()) {
+      if (confirmPeriodEnd && !activePeriod) {
+        throw new Error('Không có kỳ kinh đang diễn ra để kết thúc.');
+      }
+      if (!confirmPeriodStart && !confirmPeriodEnd && flowIntensity === 'NONE' && !hasClots && selectedSymptoms.size === 0 && !notes.trim()) {
         throw new Error('Hãy chọn ít nhất một thông tin trước khi lưu nhật ký.');
       }
       const payload: UpsertDailyLogDto = {
         flowIntensity,
         hasClots,
         confirmPeriodStart,
+        confirmPeriodEnd,
         notes: notes.trim(),
         symptoms: Array.from(selectedSymptoms).map((symptomId) => ({
           symptomId,
@@ -279,6 +305,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
       queryClient.invalidateQueries({ queryKey: ['daily-log', selectedDate] });
       queryClient.invalidateQueries({ queryKey: ['cycle-insights'] });
       queryClient.invalidateQueries({ queryKey: ['cycles'] });
+      queryClient.invalidateQueries({ queryKey: ['cycles-for-log-check'] });
       toast.success('Đã lưu nhật ký sức khỏe');
       onSaved();
       onClose();
@@ -299,7 +326,13 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
         disabled={saveMutation.isPending || (confirmPeriodStart && flowIntensity === 'NONE')}
         className="hi-btn-primary rounded-xl px-6 py-3 text-sm font-bold"
       >
-        {saveMutation.isPending ? 'Đang lưu...' : confirmPeriodStart ? 'Xác nhận bắt đầu kỳ' : 'Lưu nhật ký'}
+        {saveMutation.isPending
+          ? 'Đang lưu...'
+          : confirmPeriodStart
+            ? 'Xác nhận bắt đầu kỳ'
+            : confirmPeriodEnd
+              ? 'Lưu và kết thúc kỳ'
+              : 'Lưu nhật ký'}
       </button>
     </div>
   );
@@ -308,8 +341,8 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
     <ResponsiveModal
       open={open}
       onClose={onClose}
-      title={confirmPeriodStart ? 'Xác nhận bắt đầu kỳ' : 'Nhật ký sức khỏe'}
-      description={confirmPeriodStart ? 'Ghi lượng kinh thực tế để xác nhận Ngày 1 của kỳ kinh mới.' : 'Chọn những thay đổi bạn ghi nhận trong ngày.'}
+      title={confirmPeriodStart ? 'Xác nhận bắt đầu kỳ' : activePeriod ? 'Theo dõi kỳ đang diễn ra' : 'Nhật ký sức khỏe'}
+      description={confirmPeriodStart ? 'Ghi lượng kinh thực tế để xác nhận Ngày 1 của kỳ kinh mới.' : 'Mỗi ngày có lượng kinh sẽ được nối vào kỳ hiện tại.'}
       icon={<Heartbeat size={22} weight="duotone" aria-hidden="true" />}
       maxWidthClassName="sm:max-w-5xl"
       bodyClassName="bg-slate-50/80"
@@ -327,7 +360,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
           </button>
           <div className="text-center">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-rose-500">
-              {confirmPeriodStart ? 'Bắt đầu kỳ kinh' : selectedDate === today ? 'Hôm nay' : 'Nhật ký ngày'}
+              {confirmPeriodStart ? 'Bắt đầu kỳ kinh' : selectedDateBelongsToActivePeriod ? 'Kỳ đang diễn ra' : selectedDate === today ? 'Hôm nay' : 'Nhật ký ngày'}
             </p>
             <p className="mt-1 text-sm font-extrabold capitalize text-slate-800">{formatDate(selectedDate)}</p>
           </div>
@@ -413,32 +446,73 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
                 </button>
               </div>
 
-              {/* Toggle switch for confirmPeriodStart */}
-              <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-                <div className="flex flex-col gap-0.5 pr-4 text-left">
-                  <span className="text-xs font-black uppercase tracking-wide text-rose-500">Kích hoạt kỳ kinh mới</span>
-                  <span className="text-sm font-extrabold text-slate-800">Đánh dấu ngày này là ngày bắt đầu kỳ kinh mới</span>
-                  <span className="text-[11px] font-semibold text-slate-400 leading-snug">
-                    Hi sẽ tự động tạo một chu kỳ kinh nguyệt mới bắt đầu từ ngày này.
-                  </span>
-                  {isExistingPeriodStart && (
-                    <span className="mt-1 inline-flex items-center gap-1 w-fit rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                      <CheckCircle size={12} weight="fill" aria-hidden="true" />
-                      Đã ghi nhận trong lịch sử chu kỳ
-                    </span>
+              {activePeriod ? (
+                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle size={20} weight="fill" className="mt-0.5 shrink-0 text-emerald-600" aria-hidden="true" />
+                      <div>
+                        <p className="text-sm font-extrabold text-emerald-900">Kỳ kinh đang diễn ra</p>
+                        <p className="mt-0.5 text-xs font-semibold leading-relaxed text-emerald-700">
+                          Bắt đầu {formatDate(activePeriod.startDate.slice(0, 10))} · đã ghi nhận {activePeriod.periodLength || 1} ngày.
+                          Chọn lượng kinh hôm nay để nối tiếp cùng kỳ.
+                        </p>
+                        {(activePeriod.periodLength || 1) > 7 && (
+                          <p className="mt-2 text-xs font-bold leading-relaxed text-amber-700">
+                            Kỳ đã kéo dài trên 7 ngày. Bạn vẫn có thể lưu, nhưng nên trao đổi với bác sĩ nếu tình trạng tiếp tục hoặc lượng máu nhiều.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {canEndActivePeriod && (
+                    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                      <div className="text-left">
+                        <p className="text-sm font-extrabold text-slate-800">Đánh dấu đây là ngày cuối kỳ</p>
+                        <p className="mt-0.5 text-[11px] font-semibold leading-snug text-slate-400">
+                          Nếu hôm nay không còn kinh, Hi sẽ kết thúc tại ngày có lượng kinh gần nhất.
+                        </p>
+                      </div>
+                      <label className="relative inline-flex shrink-0 cursor-pointer select-none items-center">
+                        <input
+                          type="checkbox"
+                          checked={confirmPeriodEnd}
+                          onChange={(event) => setConfirmPeriodEnd(event.target.checked)}
+                          className="peer sr-only"
+                        />
+                        <span className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full peer-checked:after:border-white" />
+                      </label>
+                    </div>
                   )}
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={confirmPeriodStart}
-                    disabled={isExistingPeriodStart}
-                    onChange={(e) => setConfirmPeriodStart(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className={`w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500 ${isExistingPeriodStart ? 'opacity-60 cursor-not-allowed' : ''}`}></div>
-                </label>
-              </div>
+              ) : (
+                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
+                  <div className="flex flex-col gap-0.5 pr-4 text-left">
+                    <span className="text-xs font-black uppercase tracking-wide text-rose-500">Kích hoạt kỳ kinh mới</span>
+                    <span className="text-sm font-extrabold text-slate-800">Đánh dấu ngày này là ngày bắt đầu kỳ kinh mới</span>
+                    <span className="text-[11px] font-semibold leading-snug text-slate-400">
+                      Hi sẽ tạo một kỳ đang diễn ra; số ngày thực tế tăng theo nhật ký của bạn.
+                    </span>
+                    {isExistingPeriodStart && (
+                      <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                        <CheckCircle size={12} weight="fill" aria-hidden="true" />
+                        Đã ghi nhận trong lịch sử chu kỳ
+                      </span>
+                    )}
+                  </div>
+                  <label className="relative inline-flex cursor-pointer select-none items-center">
+                    <input
+                      type="checkbox"
+                      checked={confirmPeriodStart}
+                      disabled={isExistingPeriodStart}
+                      onChange={(event) => setConfirmPeriodStart(event.target.checked)}
+                      className="peer sr-only"
+                    />
+                    <span className={`h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all peer-checked:bg-pink-500 peer-checked:after:translate-x-full peer-checked:after:border-white ${isExistingPeriodStart ? 'cursor-not-allowed opacity-60' : ''}`} />
+                  </label>
+                </div>
+              )}
             </section>
 
             {visibleGroups.map((group) => (

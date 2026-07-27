@@ -73,6 +73,18 @@ function getProjectedWindow(
   };
 }
 
+function getRecordedPeriodEnd(cycle: CycleRecord, insights?: CycleInsights | null) {
+  const start = cycle.startDate.slice(0, 10);
+  if (cycle.endDate) return cycle.endDate.slice(0, 10);
+  const isOngoing = cycle.status === 'ONGOING'
+    || (insights?.periodOngoing && insights.lastRecordedStartDate?.slice(0, 10) === start);
+  if (isOngoing) {
+    return cycle.lastBleedingDate?.slice(0, 10) ?? addDays(start, Math.max(cycle.periodLength || 1, 1) - 1);
+  }
+  const estimatedLength = Math.round(insights?.averagePeriodLength || cycle.periodLength || 5);
+  return addDays(start, Math.max(estimatedLength, 1) - 1);
+}
+
 function isCloseToRecorded(dateIso: string, cycles: CycleRecord[], insights?: CycleInsights | null) {
   const date = fromIsoDate(dateIso);
   if (!date) return false;
@@ -80,11 +92,7 @@ function isCloseToRecorded(dateIso: string, cycles: CycleRecord[], insights?: Cy
 
   for (const cycle of cycles) {
     const start = cycle.startDate.slice(0, 10);
-    const hasEndDate = !!cycle.endDate;
-    const periodLen = hasEndDate
-      ? (cycle.periodLength || 5)
-      : Math.round(insights?.averagePeriodLength || cycle.periodLength || 5);
-    const end = cycle.endDate?.slice(0, 10) ?? addDays(start, periodLen - 1);
+    const end = getRecordedPeriodEnd(cycle, insights);
 
     const startDate = fromIsoDate(start);
     const endDate = fromIsoDate(end);
@@ -111,13 +119,11 @@ export function getCycleDayKind(date: Date, cycles: CycleRecord[], insights?: Cy
 
   for (const cycle of cycles) {
     const start = cycle.startDate.slice(0, 10);
-    const hasEndDate = !!cycle.endDate;
-    const periodLen = hasEndDate
-      ? (cycle.periodLength || 5)
-      : Math.round(insights?.averagePeriodLength || cycle.periodLength || 5);
-    const end = cycle.endDate?.slice(0, 10) ?? addDays(start, periodLen - 1);
+    const isOngoing = cycle.status === 'ONGOING'
+      || (insights?.periodOngoing && insights.lastRecordedStartDate?.slice(0, 10) === start);
+    const end = getRecordedPeriodEnd(cycle, insights);
     if (isWithinIso(dateIso, start, end)) {
-      if (!hasEndDate && dateIso > todayIso) {
+      if (!cycle.endDate && !isOngoing && dateIso > todayIso) {
         return 'predicted';
       }
       return 'recorded';
