@@ -52,12 +52,12 @@ function addIsoDays(value: string, amount: number) {
 
 function buildPeriodDates(cycle: CycleRecord | null, insights?: CycleInsights | null) {
   if (!cycle) return [];
-  const isOngoing = cycle.status === 'ONGOING'
+  const isOngoing = cycle.status === 'ONGOING' || cycle.status === 'NEEDS_CONFIRMATION'
     || (insights?.periodOngoing && insights.lastRecordedStartDate?.slice(0, 10) === cycle.startDate.slice(0, 10));
   const periodLen = cycle.endDate || isOngoing
     ? (cycle.periodLength || (isOngoing ? 1 : 5))
     : Math.round(insights?.averagePeriodLength || cycle.periodLength || 5);
-  const periodLength = Math.max(1, Math.min(periodLen, 30));
+  const periodLength = Math.max(1, periodLen);
   return Array.from({ length: periodLength }, (_, index) => addIsoDays(cycle.startDate, index));
 }
 
@@ -101,6 +101,9 @@ export default function CyclesPage() {
   }, [cycles, selected]);
 
   const activeCycle = cycles.find((cycle) => cycle._id === selected) ?? cycles[0] ?? null;
+  const canEstimatePhases = Boolean(
+    insights?.fertilityEstimateAvailable && activeCycle?._id === cycles[0]?._id,
+  );
   const avgLen = Math.round(insights?.averageCycleLength ?? 0);
   const avgPeriod = Math.round(insights?.averagePeriodLength ?? 0);
   const minLen = cycles.length ? Math.min(...cycles.map((cycle) => cycle.cycleLength || 28)) : 0;
@@ -202,7 +205,7 @@ export default function CyclesPage() {
                       Hi tính chu kỳ thế nào?
                     </h2>
                     <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-500">
-                      Hi chỉ dùng các kỳ kinh đã được bạn xác nhận trong lịch sử. Độ dài chu kỳ được tính từ khoảng cách giữa các ngày bắt đầu kỳ liên tiếp; nếu chưa đủ dữ liệu, hệ thống dùng mặc định cá nhân rồi fallback 28 ngày.
+                      Hi dùng tối đa 6 khoảng chu kỳ gần nhất và trung vị có trọng số để hạn chế ảnh hưởng của dữ liệu lệch. Kết quả được hiển thị thành một khoảng ngày; nếu chưa đủ dữ liệu, hệ thống dùng mặc định cá nhân rồi fallback 28 ngày.
                     </p>
                   </div>
                   <span className="rounded-full bg-sky-50 px-3 py-1.5 text-[11px] font-black text-sky-700">Dự đoán tham khảo</span>
@@ -210,11 +213,11 @@ export default function CyclesPage() {
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   <div className="rounded-2xl bg-rose-50/70 p-3">
                     <p className="text-xs font-extrabold text-rose-600">Kỳ tiếp theo</p>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500">Ước tính từ kỳ gần nhất cộng độ dài chu kỳ trung bình.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">Ước tính theo khoảng sớm–muộn, có tính đến độ biến động và độ đầy đủ dữ liệu.</p>
                   </div>
                   <div className="rounded-2xl bg-sky-50/80 p-3">
                     <p className="text-xs font-extrabold text-sky-700">Rụng trứng & thụ thai</p>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500">Ngày rụng trứng ước tính khoảng 14 ngày trước kỳ tiếp theo; cửa sổ thụ thai là 5 ngày trước đến 1 ngày sau.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">Chỉ hiển thị khi lịch sử đủ ổn định. Ngoài cửa sổ ước tính vẫn có thể mang thai và kết quả không dùng để tránh thai.</p>
                   </div>
                   <div className="rounded-2xl bg-violet-50/70 p-3">
                     <p className="text-xs font-extrabold text-violet-700">Triệu chứng</p>
@@ -246,7 +249,10 @@ export default function CyclesPage() {
                     {cycles.map((cycle, index) => {
                       const isActive = cycle._id === activeCycle?._id;
                       const isLatest = index === 0;
-                      const ovulationDay = Math.max((cycle.periodLength || 5) + 1, (cycle.cycleLength || 28) - 14);
+                      const periodShare = Math.min(
+                        100,
+                        ((cycle.periodLength || 5) / Math.max(cycle.cycleLength || 28, 1)) * 100,
+                      );
                       return (
                         <button
                           key={cycle._id}
@@ -290,9 +296,7 @@ export default function CyclesPage() {
                           </div>
 
                           <div className="mt-3 flex gap-0.5 rounded-lg overflow-hidden h-2">
-                            <div className="rounded-sm" style={{ width: `${((cycle.periodLength || 5) / (cycle.cycleLength || 28)) * 100}%`, background: '#fecdd3' }} />
-                            <div className="rounded-sm" style={{ width: `${Math.max(((ovulationDay - 2 - (cycle.periodLength || 5)) / (cycle.cycleLength || 28)) * 100, 0)}%`, background: '#e0f2fe' }} />
-                            <div className="rounded-sm" style={{ width: `${(3 / (cycle.cycleLength || 28)) * 100}%`, background: '#bae6fd' }} />
+                            <div className="rounded-sm" style={{ width: `${periodShare}%`, background: '#fecdd3' }} />
                             <div className="flex-1 rounded-sm" style={{ background: '#e2e8f0' }} />
                           </div>
                         </button>
@@ -328,7 +332,9 @@ export default function CyclesPage() {
                           <div className="border-b border-violet-50 bg-violet-50/50 px-6 py-3">
                             <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-500">Kỳ tiếp theo dự kiến</p>
                             <p className="mt-1 text-sm font-bold text-slate-700">
-                              {fmtShort(insights.estimatedPeriodStartDate)}
+                              {fmtShort(insights.predictedStartEarliest ?? insights.estimatedPeriodStartDate)}
+                              {' – '}
+                              {fmtShort(insights.predictedStartLatest ?? insights.estimatedPeriodStartDate)}
                               {insights.periodStatus === 'DELAYED'
                                 ? ` · Trễ ${insights.periodDelayDays ?? 0} ngày`
                                 : insights.periodStatus === 'PREDICTED'
@@ -352,12 +358,13 @@ export default function CyclesPage() {
                           </div>
                         )}
 
+                        {canEstimatePhases ? (
                         <div className="px-6 py-5 border-b border-gray-50">
                           <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Các giai đoạn</p>
                           <div className="space-y-2.5">
                             {PHASES.map((phase, index) => {
                               const cycleLen = activeCycle.cycleLength || 28;
-                              const isOngoing = activeCycle.status === 'ONGOING'
+                              const isOngoing = activeCycle.status === 'ONGOING' || activeCycle.status === 'NEEDS_CONFIRMATION'
                                 || (insights?.periodOngoing && insights.lastRecordedStartDate?.slice(0, 10) === activeCycle.startDate.slice(0, 10));
                               const periodLen = activeCycle.endDate || isOngoing
                                 ? (activeCycle.periodLength || (isOngoing ? 1 : 5))
@@ -384,6 +391,19 @@ export default function CyclesPage() {
                             })}
                           </div>
                         </div>
+                        ) : (
+                          <div className="border-b border-gray-50 px-6 py-5">
+                            <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                              Các giai đoạn
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-slate-600">
+                              Chưa đủ dữ liệu ổn định để ước tính nang trứng, rụng trứng và hoàng thể cho kỳ này.
+                            </p>
+                            <p className="mt-1 text-xs text-slate-400">
+                              Các ngày dự đoán không phải “ngày an toàn” và không dùng để thay thế biện pháp tránh thai.
+                            </p>
+                          </div>
+                        )}
 
                         <div className="px-6 py-5 grid grid-cols-2 gap-3 border-b border-gray-50">
                           <div className="p-3.5 rounded-2xl" style={{ background: '#fff5f9' }}>
@@ -393,7 +413,7 @@ export default function CyclesPage() {
                           <div className="p-3.5 rounded-2xl" style={{ background: '#fff5f5' }}>
                             <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wide mb-0.5">Kinh nguyệt</p>
                             <p className="text-2xl font-extrabold text-slate-900">
-                              {activeCycle.status === 'ONGOING' || (insights?.periodOngoing && activeCycle._id === cycles[0]?._id)
+                              {activeCycle.status === 'ONGOING' || activeCycle.status === 'NEEDS_CONFIRMATION' || (insights?.periodOngoing && activeCycle._id === cycles[0]?._id)
                                 ? `Đang diễn ra: ${activeCycle.periodLength || 1} ngày`
                                 : activeCycle.endDate
                                 ? `${activeCycle.periodLength || 5} ngày`
@@ -404,7 +424,7 @@ export default function CyclesPage() {
                             <p className="text-[10px] font-bold text-sky-500 uppercase tracking-wide mb-0.5">Kỳ kinh tiếp</p>
                             <p className="text-sm font-extrabold text-slate-800">
                               {activeCycle._id === cycles[0]?._id && insights?.estimatedPeriodStartDate
-                                ? fmtShort(insights.estimatedPeriodStartDate)
+                                ? `${fmtShort(insights.predictedStartEarliest ?? insights.estimatedPeriodStartDate)} – ${fmtShort(insights.predictedStartLatest ?? insights.estimatedPeriodStartDate)}`
                                 : nextPeriod(activeCycle.startDate, activeCycle.cycleLength || 28)}
                             </p>
                           </div>

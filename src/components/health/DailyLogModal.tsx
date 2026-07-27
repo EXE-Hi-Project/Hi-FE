@@ -144,7 +144,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
 
   const activePeriod = useMemo(() => {
     return cyclesData?.cycleRecords?.find((cycle) => {
-      if (cycle.status === 'ONGOING') return true;
+      if (cycle.status === 'ONGOING' || cycle.status === 'NEEDS_CONFIRMATION') return true;
       if (cycle.status === 'COMPLETED' || cycle.endDate) return false;
       const start = cycle.startDate.slice(0, 10);
       return start <= today && daysInclusive(start, today) <= 30;
@@ -153,7 +153,7 @@ export default function DailyLogModal({ open, mode, initialDate, onClose, onSave
   const selectedDateBelongsToActivePeriod = useMemo(() => {
     if (!activePeriod) return false;
     const start = activePeriod.startDate.slice(0, 10);
-    return selectedDate >= start && daysInclusive(start, selectedDate) <= 30;
+    return selectedDate >= start;
   }, [activePeriod, selectedDate]);
   const canEndActivePeriod = !!activePeriod && selectedDate >= activePeriod.startDate.slice(0, 10);
   const isExistingPeriodStart = useMemo(() => {
