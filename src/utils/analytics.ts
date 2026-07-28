@@ -28,7 +28,6 @@ export const getOrCreateSessionId = (): string => {
 export const trackEvent = async (
   eventType: 'PAGE_VIEW' | 'CLICK' | 'REGISTER' | 'ONBOARDING_COMPLETE',
   target: string,
-  elementText?: string,
   metadata?: Record<string, any>
 ): Promise<void> => {
   try {
@@ -44,8 +43,13 @@ export const trackEvent = async (
       userId: userId || undefined,
       eventType,
       target: target.substring(0, 160),
-      elementText: elementText ? elementText.substring(0, 120) : undefined,
-      metadata: metadata ? Object.fromEntries(Object.entries(metadata).slice(0, 12)) : undefined
+      metadata: metadata
+        ? Object.fromEntries(
+            Object.entries(metadata)
+              .filter(([, value]) => typeof value === 'number' || typeof value === 'boolean')
+              .slice(0, 12)
+          )
+        : undefined
     };
 
     const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://api.hilover.space/api' : '/api');

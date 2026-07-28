@@ -24,10 +24,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/maplibre-gl')) return 'vendor-map';
-          if (id.includes('node_modules/recharts')) return 'vendor-charts';
-          if (id.includes('@phosphor-icons')) return 'vendor-icons';
-          if (id.includes('/src/pages/CoupleMapPage') || id.includes('/src/components/couple-map/')) return 'couple-map';
-          if (id.includes('/src/components/admin/') || id.includes('/src/pages/AdminPage')) return 'admin';
         },
       },
     },

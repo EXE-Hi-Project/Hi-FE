@@ -156,14 +156,10 @@ export default function App() {
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const clickable = target.closest('button, a, [role="button"], [data-track]');
+      const clickable = target.closest<HTMLElement>('[data-track], [id]');
       if (clickable) {
         const trackId = clickable.getAttribute('data-track') || clickable.id;
-        const text = clickable.textContent?.trim() || '';
-        if (trackId || clickable.tagName === 'BUTTON' || clickable.tagName === 'A' || clickable.getAttribute('role') === 'button') {
-          const identifier = trackId || `tag:${clickable.tagName.toLowerCase()}`;
-          trackEvent('CLICK', identifier, text.substring(0, 50));
-        }
+        if (trackId) trackEvent('CLICK', trackId);
       }
     };
     document.addEventListener('click', handleGlobalClick);
