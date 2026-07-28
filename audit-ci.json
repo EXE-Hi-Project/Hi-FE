@@ -1,0 +1,12 @@
+{
+  "high": true,
+  "skip-dev": true,
+  "extra-args": [
+    "--workspaces=false",
+    "--package-lock-only"
+  ],
+  "report-type": "summary",
+  "allowlist": [
+    "GHSA-qwww-vcr4-c8h2"
+  ]
+}

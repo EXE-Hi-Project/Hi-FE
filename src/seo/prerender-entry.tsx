@@ -1,6 +1,5 @@
 import { renderToString } from 'react-dom/server';
-import { StaticRouter } from 'react-router-dom/server';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, StaticRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import LandingPage from '../pages/LandingPage';
 import SupportPage from '../pages/SupportPage';

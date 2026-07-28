@@ -316,10 +316,10 @@ export default function LoginPage() {
 
                   {/* Login error banner */}
                   {loginError && (
-                    <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl border border-red-100 bg-red-50 text-sm text-red-600 font-medium">
+                    <div role="alert" className="flex items-start gap-2.5 px-4 py-3 rounded-xl border border-red-100 bg-red-50 text-sm text-red-600 font-medium">
                       <span className="material-symbols-outlined text-red-400 text-[20px] flex-shrink-0 mt-0.5">error</span>
                       <span>{loginError}</span>
-                      <button type="button" onClick={() => setLoginError(null)} className="ml-auto flex-shrink-0 text-red-300 hover:text-red-500 transition-colors">
+                      <button type="button" aria-label="Đóng thông báo lỗi" onClick={() => setLoginError(null)} className="ml-auto flex-shrink-0 text-red-300 hover:text-red-500 transition-colors">
                         <span className="material-symbols-outlined text-[18px]">close</span>
                       </button>
                     </div>
@@ -327,41 +327,47 @@ export default function LoginPage() {
 
                   {/* Email */}
                   <div className="space-y-1.5">
-                    <label className="text-sm font-bold text-gray-800">Email</label>
+                    <label htmlFor="login-email" className="text-sm font-bold text-gray-800">Email</label>
                     <div className="relative">
                       <input
                         {...register('email')}
+                        id="login-email"
                         type="email"
                         placeholder="name@example.com"
                         autoComplete="email"
+                        aria-invalid={Boolean(errors.email)}
+                        aria-describedby={errors.email ? 'login-email-error' : undefined}
                         className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 placeholder:text-gray-400 outline-none transition-all focus:bg-white focus:border-[#9ab8f0] focus:ring-4 focus:ring-blue-50"
                       />
                       <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg select-none">mail</span>
                     </div>
-                    {errors.email && <p className="text-xs text-red-500 pl-1">{errors.email.message}</p>}
+                    {errors.email && <p id="login-email-error" className="text-xs text-red-500 pl-1">{errors.email.message}</p>}
                   </div>
 
                   {/* Password */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-bold text-gray-800">Mật khẩu</label>
+                      <label htmlFor="login-password" className="text-sm font-bold text-gray-800">Mật khẩu</label>
                       <Link to="/forgot-password" className="text-xs font-semibold hover:underline" style={{ color: '#9b6ee8' }}>Quên mật khẩu?</Link>
                     </div>
                     <div className="relative">
                       <input
                         {...register('password')}
+                        id="login-password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
                         autoComplete="current-password"
+                        aria-invalid={Boolean(errors.password)}
+                        aria-describedby={errors.password ? 'login-password-error' : undefined}
                         className="w-full h-11 pl-10 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 placeholder:text-gray-400 outline-none transition-all focus:bg-white focus:border-[#9ab8f0] focus:ring-4 focus:ring-blue-50"
                       />
                       <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg select-none">lock</span>
-                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      <button type="button" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
                         <span className="material-symbols-outlined text-lg">{showPassword ? 'visibility' : 'visibility_off'}</span>
                       </button>
                     </div>
-                    {errors.password && <p className="text-xs text-red-500 pl-1">{errors.password.message}</p>}
+                    {errors.password && <p id="login-password-error" className="text-xs text-red-500 pl-1">{errors.password.message}</p>}
                   </div>
 
                   {/* Submit */}
