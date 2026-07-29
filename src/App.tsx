@@ -5,7 +5,7 @@ import { MotionConfig } from 'motion/react';
 import { useAuthStore } from './store/authStore';
 import { consumeGoogleOAuthRedirect } from './lib/googleAuth';
 import { getUserFacingError } from './lib/userFacingError';
-import { getOrCreateSessionId, trackEvent } from './utils/analytics';
+import { getOrCreateSessionId, initializeGoogleAnalytics, trackEvent } from './utils/analytics';
 import UserGuideProvider from './components/onboarding/UserGuideProvider';
 import MaintenanceGate from './components/maintenance/MaintenanceGate';
 import SeoHead from './seo/SeoHead';
@@ -146,6 +146,10 @@ export default function App() {
   useEffect(() => {
     bootstrapSession();
   }, [bootstrapSession]);
+
+  useEffect(() => {
+    initializeGoogleAnalytics();
+  }, []);
 
   // ── ANALYTICS TRACKING ──
   useEffect(() => {
