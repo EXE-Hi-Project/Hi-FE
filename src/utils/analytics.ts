@@ -1,8 +1,32 @@
 import { useAuthStore } from '../store/authStore';
 
 const MAX_CLICK_EVENTS_PER_10_SECONDS = 20;
+const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim();
 let clickWindowStartedAt = 0;
 let clickEventsInWindow = 0;
+
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
+export const initializeGoogleAnalytics = (): void => {
+  if (!GA_MEASUREMENT_ID || typeof window === 'undefined' || window.gtag) return;
+
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = (...args: unknown[]) => {
+    window.dataLayer?.push(args);
+  };
+  window.gtag('js', new Date());
+  window.gtag('config', GA_MEASUREMENT_ID, { send_page_view: false });
+
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_MEASUREMENT_ID)}`;
+  document.head.appendChild(script);
+};
 
 // Generate a simple high-entropy UUID-like string
 const generateUUID = (): string => {
@@ -52,6 +76,8 @@ export const trackEvent = async (
         : undefined
     };
 
+    trackGoogleAnalyticsEvent(eventType, target, payload.metadata);
+
     const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://api.hilover.space/api' : '/api');
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 3000);
@@ -74,6 +100,27 @@ export const trackEvent = async (
     // Analytics is best-effort and should never affect app UX or local QA.
   }
 };
+
+function trackGoogleAnalyticsEvent(
+  eventType: 'PAGE_VIEW' | 'CLICK' | 'REGISTER' | 'ONBOARDING_COMPLETE',
+  target: string,
+  metadata?: Record<string, number | boolean>
+) {
+  if (!GA_MEASUREMENT_ID || !window.gtag) return;
+
+  const eventName = {
+    PAGE_VIEW: 'page_view',
+    CLICK: 'hi_click',
+    REGISTER: 'sign_up',
+    ONBOARDING_COMPLETE: 'onboarding_complete'
+  }[eventType];
+
+  const params = eventType === 'PAGE_VIEW'
+    ? { page_path: target }
+    : { element_id: target, ...metadata };
+
+  window.gtag('event', eventName, params);
+}
 
 function allowClickEvent() {
   const now = Date.now();
