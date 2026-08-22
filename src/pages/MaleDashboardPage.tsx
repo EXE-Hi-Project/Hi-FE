@@ -77,7 +77,7 @@ function ringCopy(insights?: CycleInsights | null) {
       value: insights?.estimatedPeriodDay ?? '--',
       eyebrow: 'Ngày dự kiến',
       caption: 'kỳ kinh ước tính',
-      color: '#f9a8d4',
+      color: '#c4b5fd',
     };
   }
   return {
@@ -241,7 +241,9 @@ export default function MaleDashboardPage() {
                             stroke={ring.color}
                             strokeWidth="8"
                             strokeLinecap="round"
-                            strokeDasharray={`${circumference * 0.78} ${circumference}`}
+                            strokeDasharray={insights?.periodStatus === 'PREDICTED'
+                              ? '10 7'
+                              : `${circumference * 0.78} ${circumference}`}
                           />
                         </svg>
                         <div className="relative text-center">
