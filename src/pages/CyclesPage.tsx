@@ -8,6 +8,7 @@ import Spinner from '../components/ui/Spinner';
 import PremiumLockCard from '../components/subscription/PremiumLockCard';
 import api from '../lib/api';
 import type { CycleInsights, CycleRecord, DailyLog } from '../types/shared';
+import { getPrimaryPredictionRange } from '../utils/cyclePrediction';
 
 const DailyLogModal = lazy(() => import('../components/health/DailyLogModal'));
 const CycleChartPanel = lazy(() => import('../components/cycles/CycleChartPanel'));
@@ -101,6 +102,7 @@ export default function CyclesPage() {
   }, [cycles, selected]);
 
   const activeCycle = cycles.find((cycle) => cycle._id === selected) ?? cycles[0] ?? null;
+  const primaryPredictionRange = getPrimaryPredictionRange(insights);
   const canEstimatePhases = Boolean(
     insights?.fertilityEstimateAvailable && activeCycle?._id === cycles[0]?._id,
   );
@@ -332,9 +334,9 @@ export default function CyclesPage() {
                           <div className="border-b border-violet-50 bg-violet-50/50 px-6 py-3">
                             <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-500">Kỳ tiếp theo dự kiến</p>
                             <p className="mt-1 text-sm font-bold text-slate-700">
-                              {fmtShort(insights.predictedStartEarliest ?? insights.estimatedPeriodStartDate)}
+                              {fmtShort(primaryPredictionRange.start ?? insights.estimatedPeriodStartDate)}
                               {' – '}
-                              {fmtShort(insights.predictedStartLatest ?? insights.estimatedPeriodStartDate)}
+                              {fmtShort(primaryPredictionRange.end ?? insights.estimatedPeriodStartDate)}
                               {insights.periodStatus === 'DELAYED'
                                 ? ` · Trễ ${insights.periodDelayDays ?? 0} ngày`
                                 : insights.periodStatus === 'PREDICTED'
@@ -424,7 +426,7 @@ export default function CyclesPage() {
                             <p className="text-[10px] font-bold text-sky-500 uppercase tracking-wide mb-0.5">Kỳ kinh tiếp</p>
                             <p className="text-sm font-extrabold text-slate-800">
                               {activeCycle._id === cycles[0]?._id && insights?.estimatedPeriodStartDate
-                                ? `${fmtShort(insights.predictedStartEarliest ?? insights.estimatedPeriodStartDate)} – ${fmtShort(insights.predictedStartLatest ?? insights.estimatedPeriodStartDate)}`
+                                ? `${fmtShort(primaryPredictionRange.start ?? insights.estimatedPeriodStartDate)} – ${fmtShort(primaryPredictionRange.end ?? insights.estimatedPeriodStartDate)}`
                                 : nextPeriod(activeCycle.startDate, activeCycle.cycleLength || 28)}
                             </p>
                           </div>
