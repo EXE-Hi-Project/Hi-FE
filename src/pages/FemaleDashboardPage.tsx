@@ -17,6 +17,7 @@ import api from '../lib/api';
 import PricingCard from '../components/PricingCard';
 import type { CycleInsights, CycleRecord, CoupleAnniversarySummary } from '../types/shared';
 import { normalizeAnniversarySummary } from '../utils/coupleAnniversaryCalendar';
+import { getEstimatedPeriodDisplayDay, getPrimaryPredictionRange } from '../utils/cyclePrediction';
 import WeatherForecast from '../components/ui/WeatherForecast';
 
 const SaleBanner = lazy(() => import('../components/subscription/SaleBanner'));
@@ -137,9 +138,10 @@ export default function FemaleDashboardPage() {
   const periodStatus = rawPeriodStatus;
   const daysUntilEstimatedPeriod = insights?.daysUntilEstimatedPeriod
     ?? (fallbackDaysUntilEstimatedPeriod !== null ? Math.max(fallbackDaysUntilEstimatedPeriod, 0) : null);
-  const fallbackEstimatedPeriodDay = getLocalCalendarDayDifference(estimatedPeriodStartDate) ?? 0;
-  const estimatedPeriodDay = insights?.estimatedPeriodDay
-    ?? (periodStatus === 'PREDICTED' ? Math.max(-fallbackEstimatedPeriodDay + 1, 1) : null);
+  // BE là nguồn sự thật cho số thứ tự ngày kinh dự kiến. Khi BE trả null,
+  // người dùng chỉ đang ở trong khoảng có thể bắt đầu chứ không phải ngày 6, 7...
+  const estimatedPeriodDay = getEstimatedPeriodDisplayDay(insights);
+  const primaryPredictionRange = getPrimaryPredictionRange(insights);
   const periodDelayDays = periodStatus === 'DELAYED'
     ? insights?.periodDelayDays ?? Math.max(-(fallbackDaysUntilEstimatedPeriod ?? 0), 0)
     : 0;
@@ -181,7 +183,7 @@ export default function FemaleDashboardPage() {
       : periodStatus === 'UPCOMING'
         ? 'Còn'
         : periodStatus === 'PREDICTED'
-          ? 'Ngày dự kiến'
+          ? estimatedPeriodDay !== null ? 'Ngày dự kiến' : 'Khoảng dự báo'
           : 'Đã trễ';
   const ringCaption = !latestCycle
     ? 'Thêm kỳ gần nhất'
@@ -190,7 +192,7 @@ export default function FemaleDashboardPage() {
       : periodStatus === 'UPCOMING'
         ? 'ngày nữa tới kỳ'
         : periodStatus === 'PREDICTED'
-          ? 'Kỳ kinh ước tính'
+          ? estimatedPeriodDay !== null ? 'Kỳ kinh ước tính' : 'chờ ghi nhận thực tế'
           : 'ngày chưa ghi nhận';
   const ringStroke = periodStatus === 'DELAYED'
     ? '#94a3b8'
@@ -332,15 +334,26 @@ export default function FemaleDashboardPage() {
                             <span className="material-symbols-outlined text-[18px]">event_upcoming</span>
                             <p className="text-[10px] font-black uppercase tracking-wide">Kỳ tiếp theo</p>
                           </div>
-                          <p className="mt-2 text-base font-extrabold text-slate-800">{formatDateRange(insights?.predictedStartEarliest ?? estimatedPeriodStartDate, insights?.predictedStartLatest ?? estimatedPeriodStartDate)}</p>
-                          <p className="mt-1 text-[11px] font-bold text-rose-400">Khoảng ngày bắt đầu ước tính</p>
+                          <p className="mt-2 text-base font-extrabold text-slate-800">{formatDateRange(primaryPredictionRange.start, primaryPredictionRange.end)}</p>
+                          <p className="mt-1 text-[11px] font-bold text-rose-400">Khoảng có khả năng cao nhất</p>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 shadow-sm">{periodLen} ngày kinh trung bình</span>
+                        <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 shadow-sm">
+                          {insights?.estimatedPeriodLengthMin && insights?.estimatedPeriodLengthMax
+                            ? `${insights.estimatedPeriodLengthMin}–${insights.estimatedPeriodLengthMax} ngày kinh ước tính`
+                            : `${periodLen} ngày kinh trung bình`}
+                        </span>
                         <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 shadow-sm">Tin cậy: {confidenceLabel}</span>
                         {(insights?.cycleCount ?? 0) < 3 && <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-700">Cần thêm lịch sử</span>}
-                        {insights?.estimatedOvulationDate && <span className="rounded-full bg-sky-50 px-3 py-1.5 text-[11px] font-bold text-sky-700">Rụng trứng ước tính: {formatShortDate(insights.estimatedOvulationDate)}</span>}
+                        {insights?.ovulationDateEarliest && insights?.ovulationDateLatest && (
+                          <span className="rounded-full bg-sky-50 px-3 py-1.5 text-[11px] font-bold text-sky-700">
+                            Rụng trứng có thể: {formatDateRange(insights.ovulationDateEarliest, insights.ovulationDateLatest)}
+                          </span>
+                        )}
+                        {(insights?.suspectedMissedCycleCount ?? 0) > 0 && (
+                          <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-700">Có thể đã bỏ sót kỳ ghi nhận</span>
+                        )}
                         <span className="rounded-full bg-violet-50 px-3 py-1.5 text-[11px] font-bold text-violet-700">Khả năng thụ thai ước tính: {fertilityLabel}</span>
                       </div>
                     </div>

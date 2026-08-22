@@ -15,6 +15,7 @@ import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import type { CycleInsights, CycleRecord, CoupleAnniversarySummary } from '../types/shared';
 import { normalizeAnniversarySummary } from '../utils/coupleAnniversaryCalendar';
+import { getEstimatedPeriodDisplayDay } from '../utils/cyclePrediction';
 import WeatherForecast from '../components/ui/WeatherForecast';
 import { useSubscription } from '../hooks/useSubscription';
 
@@ -73,10 +74,12 @@ function ringCopy(insights?: CycleInsights | null) {
     };
   }
   if (status === 'PREDICTED') {
+    const estimatedPeriodDay = getEstimatedPeriodDisplayDay(insights);
+    const hasEstimatedPeriodDay = estimatedPeriodDay !== null;
     return {
-      value: insights?.estimatedPeriodDay ?? '--',
-      eyebrow: 'Ngày dự kiến',
-      caption: 'kỳ kinh ước tính',
+      value: estimatedPeriodDay ?? '--',
+      eyebrow: hasEstimatedPeriodDay ? 'Ngày dự kiến' : 'Khoảng dự báo',
+      caption: hasEstimatedPeriodDay ? 'kỳ kinh ước tính' : 'chờ Người ấy ghi nhận',
       color: '#c4b5fd',
     };
   }
