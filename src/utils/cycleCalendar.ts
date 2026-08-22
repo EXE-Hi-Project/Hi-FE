@@ -96,12 +96,16 @@ export function getCycleDayKind(date: Date, cycles: CycleRecord[], insights?: Cy
     }
   }
 
-  const predictedStart = insights?.predictedStartEarliest
-    ?? insights?.estimatedPeriodStartDate
+  // The uncertainty bounds describe possible start dates. They must not be
+  // rendered as continuous bleeding days, otherwise a 5-day estimate can
+  // incorrectly cover two or three weeks.
+  const predictedStart = insights?.estimatedPeriodStartDate
     ?? insights?.estimatedNextStartDate;
-  const predictedEnd = insights?.predictedStartLatest
-    ? addDays(insights.predictedStartLatest, Math.max(1, Math.round(insights.averagePeriodLength ?? 5)) - 1)
-    : insights?.estimatedPeriodEndDate ?? insights?.estimatedNextEndDate;
+  const predictedEnd = insights?.estimatedPeriodEndDate
+    ?? insights?.estimatedNextEndDate
+    ?? (predictedStart
+      ? addDays(predictedStart, Math.max(1, Math.round(insights?.averagePeriodLength ?? 5)) - 1)
+      : null);
 
   const ovulationDate = insights?.estimatedOvulationDate?.slice(0, 10);
   if (ovulationDate && dateIso === ovulationDate) return 'ovulation';

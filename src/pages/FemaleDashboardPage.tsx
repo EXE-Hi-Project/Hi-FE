@@ -134,9 +134,7 @@ export default function FemaleDashboardPage() {
   const estimatedPeriodStartDate = insights?.estimatedPeriodStartDate ?? insights?.estimatedNextStartDate;
   const fallbackDaysUntilEstimatedPeriod = getLocalCalendarDayDifference(estimatedPeriodStartDate);
   const rawPeriodStatus = insights?.periodStatus ?? 'UPCOMING';
-  const periodStatus = rawPeriodStatus === 'PREDICTED' && fallbackDaysUntilEstimatedPeriod !== null && fallbackDaysUntilEstimatedPeriod <= 0
-    ? 'DELAYED'
-    : rawPeriodStatus;
+  const periodStatus = rawPeriodStatus;
   const daysUntilEstimatedPeriod = insights?.daysUntilEstimatedPeriod
     ?? (fallbackDaysUntilEstimatedPeriod !== null ? Math.max(fallbackDaysUntilEstimatedPeriod, 0) : null);
   const fallbackEstimatedPeriodDay = getLocalCalendarDayDifference(estimatedPeriodStartDate) ?? 0;
@@ -194,7 +192,11 @@ export default function FemaleDashboardPage() {
         : periodStatus === 'PREDICTED'
           ? 'Kỳ kinh ước tính'
           : 'ngày chưa ghi nhận';
-  const ringStroke = periodStatus === 'DELAYED' ? '#94a3b8' : periodStatus === 'UPCOMING' ? '#c4b5fd' : '#f472b6';
+  const ringStroke = periodStatus === 'DELAYED'
+    ? '#94a3b8'
+    : periodStatus === 'UPCOMING' || periodStatus === 'PREDICTED'
+      ? '#c4b5fd'
+      : '#f472b6';
   /* ── Modal state ── */
   const [dailyLogOpen, setDailyLogOpen] = useState(false);
   const [dailyLogMode, setDailyLogMode] = useState<DailyLogMode>('default');
