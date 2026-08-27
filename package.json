@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:desktop": "vite --mode desktop",
     "build": "npm run build:client && npm run build:prerender",
     "build:client": "tsc && vite build",
+    "build:desktop": "tsc && vite build --mode desktop",
     "build:prerender": "vite build --ssr src/seo/prerender-entry.tsx --outDir dist-ssr && node scripts/prerender.mjs",
     "test": "vitest run",
     "audit:production": "audit-ci --config audit-ci.json",

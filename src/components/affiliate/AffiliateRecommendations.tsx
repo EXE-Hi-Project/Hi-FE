@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import api from '../../lib/api';
 import { bestProductName, cleanProductTitle } from '../../utils/affiliateDisplay';
+import { openExternalUrl } from '../../lib/desktop';
 
 interface AffiliateProduct {
   _id: number;
@@ -34,7 +35,7 @@ async function openAffiliateProduct(product: AffiliateProduct) {
   } catch {
     // Tracking is best-effort; users should still be able to open the product.
   }
-  window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  await openExternalUrl(targetUrl);
 }
 
 export default function AffiliateRecommendations({

@@ -10,6 +10,7 @@ import UserGuideProvider from './components/onboarding/UserGuideProvider';
 import MaintenanceGate from './components/maintenance/MaintenanceGate';
 import SeoHead from './seo/SeoHead';
 import RouteMotionEffects from './components/motion/RouteMotionEffects';
+import { isDesktopApp, openExternalUrl } from './lib/desktop';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -61,7 +62,7 @@ function UserOnlyRoute({ children }: { children: React.ReactNode }) {
 }
 
 function authDest(user: ReturnType<typeof useAuthStore.getState>['user']) {
-  if (user?.role === 'admin') return '/admin';
+  if (user?.role === 'admin') return isDesktopApp() ? '/desktop-admin' : '/admin';
   if (!user?.onboardingCompleted) return '/onboarding';
   return user.gender === 'female' ? '/female-dashboard' : '/male-dashboard';
 }
@@ -70,8 +71,30 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, token, isBootstrapping } = useAuthStore();
   if (isBootstrapping) return null;
   if (!token) return <Navigate to="/login" replace />;
+  if (isDesktopApp()) return <Navigate to="/desktop-admin" replace />;
   if (user?.role !== 'admin') return <Navigate to={authDest(user)} replace />;
   return <>{children}</>;
+}
+
+function DesktopAdminPage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-pink-50/40 px-5 text-center">
+      <section className="max-w-md rounded-3xl border border-pink-100 bg-white p-8 shadow-xl">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-pink-500">Hi Desktop</p>
+        <h1 className="mt-3 text-2xl font-black text-slate-950">Admin Portal dùng trên web</h1>
+        <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
+          Bản desktop chỉ dành cho trải nghiệm người dùng. Portal quản trị sẽ được mở trong trình duyệt an toàn.
+        </p>
+        <button
+          type="button"
+          className="mt-6 rounded-xl bg-pink-600 px-5 py-3 text-sm font-black text-white transition hover:bg-pink-700"
+          onClick={() => void openExternalUrl('https://hilover.space/admin')}
+        >
+          Mở Admin Portal
+        </button>
+      </section>
+    </main>
+  );
 }
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
@@ -151,6 +174,11 @@ export default function App() {
     initializeGoogleAnalytics();
   }, []);
 
+  useEffect(() => {
+    if (!isDesktopApp()) return undefined;
+    return window.hiDesktop!.onNavigate((path) => navigate(path));
+  }, [navigate]);
+
   // ── ANALYTICS TRACKING ──
   useEffect(() => {
     getOrCreateSessionId();
@@ -171,6 +199,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (isDesktopApp()) return;
     const hash = window.location.hash;
     if (hash && (hash.includes('id_token=') || hash.includes('access_token='))) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -213,6 +242,7 @@ export default function App() {
       <Route path="/" element={<HomeRoute />} />
       <Route path="/login" element={<AuthRoute><LoginPage /></AuthRoute>} />
       <Route path="/register" element={<AuthRoute><RegisterPage /></AuthRoute>} />
+      <Route path="/desktop-admin" element={<DesktopAdminPage />} />
       <Route path="/forgot-password" element={<AuthRoute><ForgotPasswordPage /></AuthRoute>} />
       <Route path="/reset-password/:token" element={<AuthRoute><ResetPasswordPage /></AuthRoute>} />
       <Route path="/terms" element={<TermsPage />} />

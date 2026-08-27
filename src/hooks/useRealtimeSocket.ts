@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useRealtimeConnectionStore } from '../store/realtimeStore';
 import { mergeChatMessages } from '../components/chat/chatMessageUtils';
 import type { ChatMessage, Notification } from '../types';
+import { isDesktopApp } from '../lib/desktop';
 
 type EventData = Record<string, unknown>;
 
@@ -23,6 +24,9 @@ function handleNotificationEvent(queryClient: QueryClient, event: RealtimeEvent<
 
   if (event.type === 'notification.created' && data.notification) {
     const notification = data.notification as Notification;
+    if (isDesktopApp()) {
+      void window.hiDesktop!.showNotification().catch(() => undefined);
+    }
     queryClient.setQueryData<Notification[]>(['notifications'], (current = []) => [
       notification,
       ...current.filter((item) => item._id !== notification._id),

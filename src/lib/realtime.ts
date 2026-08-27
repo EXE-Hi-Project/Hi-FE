@@ -9,7 +9,7 @@ export interface RealtimeEvent<T = unknown> {
 
 export type RealtimeEventHandler = (event: RealtimeEvent) => void;
 
-const productionApiUrl = 'https://api.hilover.space/api';
+const productionApiUrl = '/api';
 
 export function getRealtimeBrokerUrl(): string {
   const configuredApiUrl =

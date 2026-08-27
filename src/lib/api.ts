@@ -2,12 +2,14 @@ import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 import { toast } from 'react-hot-toast';
 import { buildLoginRedirect, clearAuthSession } from './session';
 
-const productionApiUrl = 'https://api.hilover.space/api';
+// Vercel proxies this route to Render in production, keeping auth cookies first-party.
+const productionApiUrl = '/api';
 const apiBaseUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? productionApiUrl : '/api');
+const desktopNoStoreHeaders = import.meta.env.VITE_DESKTOP === 'true' ? { 'Cache-Control': 'no-store' } : {};
 
 const api = axios.create({
   baseURL: apiBaseUrl,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', ...desktopNoStoreHeaders },
   timeout: 12_000,
   withCredentials: true,
 });

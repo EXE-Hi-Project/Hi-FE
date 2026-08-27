@@ -1,4 +1,5 @@
 import { useAuthStore } from '../store/authStore';
+import { isDesktopApp } from '../lib/desktop';
 
 const MAX_CLICK_EVENTS_PER_10_SECONDS = 20;
 const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim();
@@ -13,6 +14,7 @@ declare global {
 }
 
 export const initializeGoogleAnalytics = (): void => {
+  if (isDesktopApp()) return;
   if (!GA_MEASUREMENT_ID || typeof window === 'undefined' || window.gtag) return;
 
   window.dataLayer = window.dataLayer || [];
@@ -54,6 +56,7 @@ export const trackEvent = async (
   target: string,
   metadata?: Record<string, any>
 ): Promise<void> => {
+  if (isDesktopApp()) return;
   try {
     if (eventType === 'CLICK' && !allowClickEvent()) {
       return;

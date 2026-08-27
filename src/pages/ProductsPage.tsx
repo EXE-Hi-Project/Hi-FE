@@ -14,6 +14,7 @@ import {
 } from '@phosphor-icons/react';
 import api from '../lib/api';
 import { getUserFacingError } from '../lib/userFacingError';
+import { openExternalUrl } from '../lib/desktop';
 import { useAuthStore } from '../store/authStore';
 import { bestProductName, cleanProductTitle } from '../utils/affiliateDisplay';
 
@@ -160,7 +161,7 @@ async function openAffiliateProduct(product: AffiliateProduct) {
     toast.error('Sản phẩm chưa có liên kết để mở');
     return;
   }
-  window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  await openExternalUrl(targetUrl);
 }
 
 function ProductImage({ product, theme }: { product: AffiliateProduct; theme: (typeof themes)[GenderTheme] }) {
@@ -295,7 +296,9 @@ export default function ProductsPage() {
     onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ['voucher-orders-mine'] });
       if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+        void openExternalUrl(data.checkoutUrl).catch(() => {
+          toast.error('Không thể mở trang thanh toán voucher');
+        });
         return;
       }
       toast.error('Chưa nhận được link thanh toán voucher');

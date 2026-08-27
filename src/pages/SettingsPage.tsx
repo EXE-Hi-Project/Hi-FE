@@ -36,8 +36,9 @@ interface PresignAvatarResponse {
   data?: {
     uploadUrl: string;
     objectKey: string;
-    publicUrl: string;
     contentType: string;
+    uploadMethod?: 'POST' | 'PUT';
+    uploadParams?: Record<string, string | number | boolean>;
   };
 }
 
@@ -154,11 +155,23 @@ export default function SettingsPage() {
         throw new Error('Không lấy được URL tải ảnh');
       }
 
-      await axios.put(presigned.uploadUrl, file, {
-        headers: { 'Content-Type': presigned.contentType || file.type },
-        withCredentials: false,
-        timeout: 30_000,
-      });
+      if (presigned.uploadMethod === 'POST') {
+        const uploadForm = new FormData();
+        Object.entries(presigned.uploadParams ?? {}).forEach(([key, value]) => {
+          uploadForm.append(key, String(value));
+        });
+        uploadForm.append('file', file);
+        await axios.post(presigned.uploadUrl, uploadForm, {
+          withCredentials: false,
+          timeout: 30_000,
+        });
+      } else {
+        await axios.put(presigned.uploadUrl, file, {
+          headers: { 'Content-Type': presigned.contentType || file.type },
+          withCredentials: false,
+          timeout: 30_000,
+        });
+      }
 
       const { data } = await api.post<ProfileResponse>('/users/avatar/confirm', {
         objectKey: presigned.objectKey,

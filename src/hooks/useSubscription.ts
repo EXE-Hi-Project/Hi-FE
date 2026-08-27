@@ -3,6 +3,7 @@ import api from '../lib/api';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { getUserFacingError } from '../lib/userFacingError';
+import { openExternalUrl } from '../lib/desktop';
 
 export interface SubscriptionInfo {
   plan: 'FREE' | 'PREMIUM_MONTHLY' | 'PREMIUM_YEARLY';
@@ -93,7 +94,9 @@ export function useCheckout() {
         return;
       }
       if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+        void openExternalUrl(data.checkoutUrl).catch(() => {
+          toast.error('Không thể mở trang thanh toán');
+        });
       } else {
         toast.error('Không tìm thấy URL thanh toán');
       }

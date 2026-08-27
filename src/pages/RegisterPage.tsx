@@ -9,6 +9,7 @@ import HiLogo from '../components/ui/HiLogo';
 import { trackEvent } from '../utils/analytics';
 import { buildGoogleOAuthUrl, extractSafeNextPath, getSafeNextPath } from '../lib/googleAuth';
 import { getUserFacingError } from '../lib/userFacingError';
+import { isDesktopApp } from '../lib/desktop';
 
 const schema = z.object({
   name: z.string().min(2, 'Tên tối thiểu 2 ký tự'),
@@ -95,8 +96,13 @@ export default function RegisterPage() {
     navigate(getSafeNextPath(location.search, destination));
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     try {
+      if (isDesktopApp()) {
+        const user = await socialLogin('google', {});
+        navigateAfterLogin(user);
+        return;
+      }
       const nextPath = extractSafeNextPath(location.search) ?? undefined;
       window.location.assign(buildGoogleOAuthUrl(nextPath));
     } catch (err) {

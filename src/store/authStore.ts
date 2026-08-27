@@ -3,10 +3,15 @@ import { ApiResponse, AuthPayload, RegisterDto, User } from '../types';
 import api from '../lib/api';
 import { clearAuthSession, hasAuthSessionMarker, markAuthSessionActive } from '../lib/session';
 import { getUserFacingError } from '../lib/userFacingError';
+import { isDesktopApp } from '../lib/desktop';
 
 type AuthApiResponse = ApiResponse<AuthPayload> & Partial<AuthPayload>;
 type UserApiResponse = ApiResponse<{ user: User }> & { user?: User };
 type AuthErrorData = { code?: string; email?: string; trackingId?: string };
+
+function isUser(value: unknown): value is User {
+  return typeof value === 'object' && value !== null && typeof (value as { _id?: unknown })._id === 'string';
+}
 
 function authRequestError(err: any, fallback: string) {
   const error = new Error(getUserFacingError(err, fallback)) as Error & AuthErrorData;
@@ -128,6 +133,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
   socialLogin: async (provider, payload) => {
     set({ isLoading: true });
     try {
+      if (provider === 'google' && isDesktopApp()) {
+        const user = await window.hiDesktop!.startGoogleSignIn();
+        if (!isUser(user)) throw new Error('Phản hồi đăng nhập Google không hợp lệ');
+        markAuthSessionActive();
+        set({ user, token: SESSION_MARKER, isLoading: false });
+        return user;
+      }
       const { data } = await api.post<AuthApiResponse>(`/auth/${provider}`, payload);
       const authPayload = unwrapAuthPayload(data);
       markAuthSessionActive();
