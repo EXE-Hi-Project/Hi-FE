@@ -13,7 +13,9 @@ const productionApiUrl = '/api';
 
 export function getRealtimeBrokerUrl(): string {
   const configuredApiUrl =
-    import.meta.env.VITE_API_URL || (import.meta.env.PROD ? productionApiUrl : window.location.origin);
+    import.meta.env.PROD
+      ? productionApiUrl
+      : import.meta.env.VITE_API_URL || window.location.origin;
   const apiUrl = new URL(configuredApiUrl, window.location.origin);
   apiUrl.protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
   apiUrl.pathname = '/ws';

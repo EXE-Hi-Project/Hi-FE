@@ -2,9 +2,13 @@ import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 import { toast } from 'react-hot-toast';
 import { buildLoginRedirect, clearAuthSession } from './session';
 
-// Vercel proxies this route to Render in production, keeping auth cookies first-party.
+// The web app always uses Vercel's same-origin proxy in production. This keeps
+// auth cookies first-party and prevents a stale public VITE_API_URL from
+// shipping an obsolete API host in the browser bundle.
 const productionApiUrl = '/api';
-const apiBaseUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? productionApiUrl : '/api');
+const apiBaseUrl = import.meta.env.PROD
+  ? productionApiUrl
+  : import.meta.env.VITE_API_URL || productionApiUrl;
 const desktopNoStoreHeaders = import.meta.env.VITE_DESKTOP === 'true' ? { 'Cache-Control': 'no-store' } : {};
 
 const api = axios.create({
