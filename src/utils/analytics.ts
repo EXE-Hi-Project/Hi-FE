@@ -81,7 +81,9 @@ export const trackEvent = async (
 
     trackGoogleAnalyticsEvent(eventType, target, payload.metadata);
 
-    const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://api.hilover.space/api' : '/api');
+    // Keep browser requests same-origin in production; Vercel proxies /api to
+    // the active backend and cookies remain first-party.
+    const apiUrl = import.meta.env.PROD ? '/api' : import.meta.env.VITE_API_URL || '/api';
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 3000);
 
