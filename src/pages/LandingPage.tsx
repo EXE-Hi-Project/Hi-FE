@@ -9,7 +9,6 @@ import {
   PREMIUM_YEARLY_FEATURES,
 } from '../config/subscriptionPlans';
 import { FALLBACK_PRICING, formatPlanPrice, usePlanPricing } from '../hooks/usePlanPricing';
-import { WINDOWS_DESKTOP_DOWNLOAD_URL } from '../config/desktopDownload';
 
 const REVIEWER_AVATARS = {
   minhAnh: { initials: 'MA', className: 'from-pink-100 to-sky-100 text-pink-700' },
@@ -714,14 +713,6 @@ export default function LandingPage() {
                   >
                     Đăng ký ngay
                   </Link>
-                  <a
-                    href={WINDOWS_DESKTOP_DOWNLOAD_URL}
-                    data-track="download-windows-desktop"
-                    className="lp-btn-white flex min-w-[140px] cursor-pointer items-center justify-center rounded-full h-12 px-6 bg-white border border-slate-200 text-slate-900 text-base font-bold tracking-wide"
-                  >
-                    <span className="material-symbols-outlined mr-2 text-[20px]">download</span>
-                    Tải cho Windows
-                  </a>
                 </div>
 
                 {/* Social proof */}
